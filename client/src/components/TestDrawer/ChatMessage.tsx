@@ -10,8 +10,9 @@ import {
   MessageSquare,
   User,
   Globe,
+  BarChart3,
 } from 'lucide-react';
-import type { TestMessage } from '../../services/workflowRunner';
+import type { TestMessage, WorkflowTelemetry } from '../../services/workflowRunner';
 import type { NodeType } from '../../types/workflow';
 
 interface ChatMessageProps {
@@ -212,9 +213,92 @@ export default function ChatMessage({
           </div>
         );
 
+      case 'telemetry':
+        return renderTelemetry(message.telemetry);
+
       default:
         return <span className="text-gray-300">{message.content}</span>;
     }
+  };
+
+  const formatDuration = (ms: number): string => {
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(2)}s`;
+    const mins = Math.floor(ms / 60000);
+    const secs = ((ms % 60000) / 1000).toFixed(1);
+    return `${mins}m ${secs}s`;
+  };
+
+  const renderTelemetry = (telemetry?: WorkflowTelemetry) => {
+    if (!telemetry) return null;
+
+    return (
+      <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-2 text-indigo-300 font-semibold">
+          <BarChart3 size={18} />
+          <span>Execution Summary</span>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="space-y-1">
+            <div className="text-gray-400">Total Time</div>
+            <div className="text-2xl font-bold text-white">
+              {formatDuration(telemetry.totalDuration || 0)}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-gray-400">Steps Executed</div>
+            <div className="text-2xl font-bold text-white">
+              {telemetry.summary.totalNodes}
+            </div>
+          </div>
+        </div>
+
+        {telemetry.summary.errorCount > 0 && (
+          <div className="flex gap-4 text-sm">
+            <span className="text-green-400">✓ {telemetry.summary.successCount} success</span>
+            <span className="text-red-400">✗ {telemetry.summary.errorCount} errors</span>
+          </div>
+        )}
+
+        <div className="border-t border-indigo-500/20 pt-3">
+          <div className="text-xs text-gray-400 mb-2">Step Breakdown</div>
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {telemetry.steps.map((step, index) => {
+              const statusIcon = step.status === 'success' ? '✓' : step.status === 'error' ? '✗' : '○';
+              const statusColor = step.status === 'success' ? 'text-green-400' : step.status === 'error' ? 'text-red-400' : 'text-gray-400';
+              
+              let detail = '';
+              if (step.metadata?.apiStatus) {
+                detail = `${step.metadata.apiStatus}`;
+              } else if (step.metadata?.conditionResult !== undefined) {
+                detail = step.metadata.conditionResult ? 'true' : 'false';
+              } else if (step.metadata?.loopIteration !== undefined) {
+                detail = `#${step.metadata.loopIteration}`;
+              }
+
+              return (
+                <div key={step.nodeId + index} className="flex items-center justify-between text-xs font-mono">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-gray-500 w-4">{index + 1}.</span>
+                    <span className="text-gray-300 truncate">{step.nodeLabel}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {detail && <span className="text-gray-500">{detail}</span>}
+                    <span className="text-gray-400 w-16 text-right">{formatDuration(step.duration)}</span>
+                    <span className={statusColor}>{statusIcon}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="text-xs text-gray-400 pt-2 border-t border-indigo-500/20">
+          Average Step Time: {formatDuration(telemetry.summary.avgStepDuration)}
+        </div>
+      </div>
+    );
   };
 
   return (

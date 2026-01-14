@@ -1,0 +1,186 @@
+{
+  "id": "1d61cfc7-8676-4f92-8903-1432f735bc78",
+  "name": "Sample API Workflow",
+  "description": "A demo workflow showing how to call an API and make decisions based on the response",
+  "userId": "guest-1768427419303-5dxz96m9b",
+  "createdAt": "2026-01-14T21:52:10.942Z",
+  "updatedAt": "2026-01-14T23:01:13.802Z",
+  "nodes": [
+    {
+      "id": "start-1",
+      "type": "start",
+      "position": {
+        "x": 210,
+        "y": -150
+      },
+      "data": {
+        "label": "Start"
+      },
+      "measured": {
+        "width": 120,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "action-1",
+      "type": "action",
+      "position": {
+        "x": 180,
+        "y": 0
+      },
+      "data": {
+        "label": "Fetch Users",
+        "description": "Call JSONPlaceholder API to get users",
+        "actionType": "api_call",
+        "apiConfig": {
+          "url": "https://jsonplaceholder.typicode.com/users",
+          "method": "GET",
+          "headers": [],
+          "body": "",
+          "queryParams": []
+        }
+      },
+      "measured": {
+        "width": 168,
+        "height": 64
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "decision-1",
+      "type": "decision",
+      "position": {
+        "x": 210,
+        "y": 165
+      },
+      "data": {
+        "label": "Check Count",
+        "description": "Check if we got users",
+        "condition": "{{Fetch Users.response.length}} > 5"
+      },
+      "measured": {
+        "width": 120,
+        "height": 120
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "action-2",
+      "type": "action",
+      "position": {
+        "x": 360,
+        "y": 315
+      },
+      "data": {
+        "label": "Log Success",
+        "description": "Many users found",
+        "actionType": "log"
+      },
+      "measured": {
+        "width": 168,
+        "height": 64
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "action-3",
+      "type": "action",
+      "position": {
+        "x": -15,
+        "y": 315
+      },
+      "data": {
+        "label": "Log Warning",
+        "description": "Few users found",
+        "actionType": "log"
+      },
+      "measured": {
+        "width": 168,
+        "height": 64
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "end-1",
+      "type": "end",
+      "position": {
+        "x": 360,
+        "y": 480
+      },
+      "data": {
+        "label": "Success End"
+      },
+      "measured": {
+        "width": 168,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "end-2",
+      "type": "end",
+      "position": {
+        "x": -15,
+        "y": 480
+      },
+      "data": {
+        "label": "Warning End"
+      },
+      "measured": {
+        "width": 168,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source": "start-1",
+      "target": "action-1",
+      "type": "smoothstep"
+    },
+    {
+      "id": "edge-2",
+      "source": "action-1",
+      "target": "decision-1",
+      "type": "smoothstep"
+    },
+    {
+      "id": "edge-3",
+      "source": "decision-1",
+      "sourceHandle": "yes",
+      "target": "action-2",
+      "type": "smoothstep",
+      "label": "Yes"
+    },
+    {
+      "id": "edge-4",
+      "source": "decision-1",
+      "sourceHandle": "no",
+      "target": "action-3",
+      "type": "smoothstep",
+      "label": "No"
+    },
+    {
+      "id": "edge-5",
+      "source": "action-2",
+      "target": "end-1",
+      "type": "smoothstep"
+    },
+    {
+      "id": "edge-6",
+      "source": "action-3",
+      "target": "end-2",
+      "type": "smoothstep"
+    }
+  ]
+}

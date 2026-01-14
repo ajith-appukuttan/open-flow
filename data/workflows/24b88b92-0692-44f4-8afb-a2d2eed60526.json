@@ -3,7 +3,7 @@
   "name": "Test Workflow",
   "description": "A test workflow",
   "createdAt": "2026-01-14T17:19:21.502Z",
-  "updatedAt": "2026-01-14T19:19:10.370Z",
+  "updatedAt": "2026-01-14T19:57:31.818Z",
   "nodes": [
     {
       "id": "start-1",
@@ -80,7 +80,7 @@
         "width": 120,
         "height": 120
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     }
   ],

@@ -1,6 +1,6 @@
 import type { Workflow, WorkflowNode, WorkflowEdge, NodeType, ApiConfig, KeyValuePair } from '../types/workflow';
 
-export type MessageType = 'system' | 'node' | 'decision' | 'user' | 'success' | 'error' | 'loop' | 'parallel' | 'api' | 'api_response';
+export type MessageType = 'system' | 'node' | 'decision' | 'user' | 'success' | 'error' | 'loop' | 'parallel' | 'api' | 'api_response' | 'telemetry';
 
 export interface TestMessage {
   id: string;
@@ -16,6 +16,7 @@ export interface TestMessage {
     data: unknown;
     error?: string;
   };
+  telemetry?: WorkflowTelemetry;
 }
 
 // Context entry for storing node outputs
@@ -32,6 +33,40 @@ export interface WorkflowContext {
   [nodeLabel: string]: NodeOutput;
 }
 
+// Telemetry types for tracking execution performance
+export interface StepTelemetry {
+  nodeId: string;
+  nodeLabel: string;
+  nodeType: NodeType;
+  startTime: Date;
+  endTime: Date;
+  duration: number; // milliseconds
+  status: 'success' | 'error' | 'skipped';
+  metadata?: {
+    apiUrl?: string;
+    apiMethod?: string;
+    apiStatus?: number;
+    condition?: string;
+    conditionResult?: boolean;
+    loopIteration?: number;
+  };
+}
+
+export interface WorkflowTelemetry {
+  workflowId: string;
+  workflowName: string;
+  startTime: Date;
+  endTime?: Date;
+  totalDuration?: number; // milliseconds
+  steps: StepTelemetry[];
+  summary: {
+    totalNodes: number;
+    successCount: number;
+    errorCount: number;
+    avgStepDuration: number;
+  };
+}
+
 export interface WorkflowRunnerState {
   isRunning: boolean;
   isPaused: boolean;
@@ -40,6 +75,8 @@ export interface WorkflowRunnerState {
   messages: TestMessage[];
   loopCounters: Record<string, number>;
   context: WorkflowContext;
+  telemetry: WorkflowTelemetry | null;
+  currentStepStartTime: Date | null;
 }
 
 /**
@@ -213,7 +250,160 @@ export class WorkflowRunner {
       messages: [],
       loopCounters: {},
       context: {},
+      telemetry: null,
+      currentStepStartTime: null,
     };
+  }
+
+  // Helper to format duration in human-readable format
+  private formatDuration(ms: number): string {
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(2)}s`;
+    const mins = Math.floor(ms / 60000);
+    const secs = ((ms % 60000) / 1000).toFixed(1);
+    return `${mins}m ${secs}s`;
+  }
+
+  // Start tracking a step
+  private startStepTiming(): void {
+    this.updateState({ currentStepStartTime: new Date() });
+  }
+
+  // Record step telemetry
+  private recordStepTelemetry(
+    node: WorkflowNode,
+    status: 'success' | 'error' | 'skipped',
+    metadata?: StepTelemetry['metadata']
+  ): void {
+    const endTime = new Date();
+    const startTime = this.state.currentStepStartTime || endTime;
+    const duration = endTime.getTime() - startTime.getTime();
+
+    const stepTelemetry: StepTelemetry = {
+      nodeId: node.id,
+      nodeLabel: node.data.label,
+      nodeType: node.type as NodeType,
+      startTime,
+      endTime,
+      duration,
+      status,
+      metadata,
+    };
+
+    if (this.state.telemetry) {
+      const updatedSteps = [...this.state.telemetry.steps, stepTelemetry];
+      const successCount = updatedSteps.filter(s => s.status === 'success').length;
+      const errorCount = updatedSteps.filter(s => s.status === 'error').length;
+      const totalDuration = updatedSteps.reduce((sum, s) => sum + s.duration, 0);
+
+      this.updateState({
+        telemetry: {
+          ...this.state.telemetry,
+          steps: updatedSteps,
+          summary: {
+            totalNodes: updatedSteps.length,
+            successCount,
+            errorCount,
+            avgStepDuration: Math.round(totalDuration / updatedSteps.length),
+          },
+        },
+        currentStepStartTime: null,
+      });
+    }
+  }
+
+  // Finalize telemetry at workflow end
+  private finalizeTelemetry(): void {
+    if (this.state.telemetry) {
+      const endTime = new Date();
+      const totalDuration = endTime.getTime() - this.state.telemetry.startTime.getTime();
+
+      this.updateState({
+        telemetry: {
+          ...this.state.telemetry,
+          endTime,
+          totalDuration,
+        },
+      });
+    }
+  }
+
+  // Display telemetry summary
+  private displayTelemetrySummary(): void {
+    if (!this.state.telemetry) return;
+
+    const { telemetry } = this.state;
+    const totalTime = this.formatDuration(telemetry.totalDuration || 0);
+
+    // Add telemetry summary message
+    this.addMessage({
+      type: 'telemetry',
+      content: `📊 Execution Summary`,
+      telemetry: telemetry,
+    });
+
+    // Display summary details
+    this.addMessage({
+      type: 'system',
+      content: `───────────────────────────────`,
+    });
+
+    this.addMessage({
+      type: 'system',
+      content: `⏱  Total Time: ${totalTime}`,
+    });
+
+    this.addMessage({
+      type: 'system',
+      content: `📍 Steps Executed: ${telemetry.summary.totalNodes}`,
+    });
+
+    if (telemetry.summary.errorCount > 0) {
+      this.addMessage({
+        type: 'system',
+        content: `✓ Success: ${telemetry.summary.successCount}  ✗ Errors: ${telemetry.summary.errorCount}`,
+      });
+    }
+
+    // Step breakdown
+    this.addMessage({
+      type: 'system',
+      content: ``,
+    });
+
+    this.addMessage({
+      type: 'system',
+      content: `Step Breakdown:`,
+    });
+
+    telemetry.steps.forEach((step, index) => {
+      const duration = this.formatDuration(step.duration).padStart(8);
+      const statusIcon = step.status === 'success' ? '✓' : step.status === 'error' ? '✗' : '○';
+      let detail = '';
+
+      if (step.metadata?.apiStatus) {
+        detail = ` ${step.metadata.apiStatus} ${step.metadata.apiMethod || ''}`;
+      } else if (step.metadata?.conditionResult !== undefined) {
+        detail = ` → ${step.metadata.conditionResult}`;
+      } else if (step.metadata?.loopIteration !== undefined) {
+        detail = ` #${step.metadata.loopIteration}`;
+      }
+
+      this.addMessage({
+        type: 'system',
+        content: `  ${(index + 1).toString().padStart(2)}. ${step.nodeLabel.padEnd(20)} ${duration}  ${statusIcon}${detail}`,
+      });
+    });
+
+    this.addMessage({
+      type: 'system',
+      content: ``,
+    });
+
+    this.addMessage({
+      type: 'system',
+      content: `📈 Average Step Time: ${this.formatDuration(telemetry.summary.avgStepDuration)}`,
+    });
   }
 
   private updateState(updates: Partial<WorkflowRunnerState>) {
@@ -271,6 +461,20 @@ export class WorkflowRunner {
       return;
     }
 
+    // Initialize telemetry
+    const telemetry: WorkflowTelemetry = {
+      workflowId: this.workflow.id,
+      workflowName: this.workflow.name,
+      startTime: new Date(),
+      steps: [],
+      summary: {
+        totalNodes: 0,
+        successCount: 0,
+        errorCount: 0,
+        avgStepDuration: 0,
+      },
+    };
+
     this.updateState({
       isRunning: true,
       isPaused: false,
@@ -279,6 +483,8 @@ export class WorkflowRunner {
       messages: [],
       loopCounters: {},
       context: {},
+      telemetry,
+      currentStepStartTime: null,
     });
 
     this.addMessage({
@@ -310,6 +516,8 @@ export class WorkflowRunner {
       messages: [],
       loopCounters: {},
       context: {},
+      telemetry: null,
+      currentStepStartTime: null,
     });
   }
 
@@ -323,6 +531,12 @@ export class WorkflowRunner {
     this.storeNodeOutput(currentNode.data.label, {
       response: { selectedOption: optionId },
       nodeType: 'decision',
+    });
+
+    // Record telemetry for manual decision selection
+    this.recordStepTelemetry(currentNode, 'success', {
+      condition: currentNode.data.condition,
+      conditionResult: optionId === 'yes',
     });
 
     // Find the edge matching the selected option
@@ -386,6 +600,9 @@ export class WorkflowRunner {
       nodeType: 'parallel',
     });
 
+    // Record telemetry for parallel branch selection
+    this.recordStepTelemetry(currentNode, 'success');
+
     const edges = this.getOutgoingEdges(this.state.currentNodeId);
     const selectedEdge = edges.find((e) => e.sourceHandle === branchId || e.id === branchId);
 
@@ -426,18 +643,22 @@ export class WorkflowRunner {
     if (!currentNode || currentNode.type !== 'loop') return;
 
     const edges = this.getOutgoingEdges(this.state.currentNodeId);
+    const currentCount = this.state.loopCounters[this.state.currentNodeId] || 0;
     
     if (shouldContinue) {
       // Find loop-back edge (usually left handle or 'loop' sourceHandle)
       const loopEdge = edges.find((e) => e.sourceHandle === 'loop') || edges[0];
       if (loopEdge) {
-        const counter = (this.state.loopCounters[this.state.currentNodeId] || 0) + 1;
+        const counter = currentCount + 1;
         
         // Store loop state in context
         this.storeNodeOutput(currentNode.data.label, {
           response: { iteration: counter, continued: true },
           nodeType: 'loop',
         });
+
+        // Record telemetry for loop iteration
+        this.recordStepTelemetry(currentNode, 'success', { loopIteration: counter });
         
         this.updateState({
           isPaused: false,
@@ -455,11 +676,13 @@ export class WorkflowRunner {
       const exitEdge = edges.find((e) => e.sourceHandle === 'exit') || edges[1] || edges[0];
       if (exitEdge) {
         // Store loop exit in context
-        const counter = this.state.loopCounters[this.state.currentNodeId] || 0;
         this.storeNodeOutput(currentNode.data.label, {
-          response: { iteration: counter, continued: false, exited: true },
+          response: { iteration: currentCount, continued: false, exited: true },
           nodeType: 'loop',
         });
+
+        // Record telemetry for loop exit
+        this.recordStepTelemetry(currentNode, 'success', { loopIteration: currentCount });
         
         this.addMessage({
           type: 'user',
@@ -487,6 +710,9 @@ export class WorkflowRunner {
       this.stop();
       return;
     }
+
+    // Start timing this step
+    this.startStepTiming();
 
     this.updateState({
       currentNodeId: nodeId,
@@ -550,9 +776,13 @@ export class WorkflowRunner {
         type: 'error',
         content: 'Start node has no outgoing connections',
       });
+      this.recordStepTelemetry(node, 'error');
       this.stop();
       return;
     }
+
+    // Record telemetry for start node
+    this.recordStepTelemetry(node, 'success');
 
     this.executeNode(edges[0].target);
   }
@@ -564,6 +794,12 @@ export class WorkflowRunner {
       nodeType: 'end',
     });
 
+    // Record telemetry for end node
+    this.recordStepTelemetry(node, 'success');
+
+    // Finalize telemetry
+    this.finalizeTelemetry();
+
     this.addMessage({
       type: 'success',
       content: `✓ Workflow completed at: ${node.data.label}`,
@@ -571,19 +807,8 @@ export class WorkflowRunner {
       nodeType: 'end',
     });
 
-    this.addMessage({
-      type: 'system',
-      content: `Visited ${this.state.visitedNodeIds.length} nodes`,
-    });
-
-    // Show available context data
-    const contextKeys = Object.keys(this.state.context);
-    if (contextKeys.length > 0) {
-      this.addMessage({
-        type: 'system',
-        content: `Context data collected from: ${contextKeys.join(', ')}`,
-      });
-    }
+    // Display telemetry summary
+    this.displayTelemetrySummary();
 
     this.updateState({
       isRunning: false,
@@ -732,6 +957,13 @@ export class WorkflowRunner {
         content: `   💡 Use {{${node.data.label}.response}} in subsequent nodes`,
       });
 
+      // Record telemetry with API metadata
+      this.recordStepTelemetry(node, isSuccess ? 'success' : 'error', {
+        apiUrl: resolvedConfig.url,
+        apiMethod: resolvedConfig.method,
+        apiStatus: response.status,
+      });
+
     } else {
       // Handle regular action
       this.addMessage({
@@ -766,6 +998,9 @@ export class WorkflowRunner {
         },
         nodeType: 'action',
       });
+
+      // Record telemetry for non-API action
+      this.recordStepTelemetry(node, 'success');
     }
 
     const edges = this.getOutgoingEdges(node.id);
@@ -774,6 +1009,7 @@ export class WorkflowRunner {
         type: 'error',
         content: `Action "${node.data.label}" has no outgoing connections. Workflow cannot continue.`,
       });
+      this.recordStepTelemetry(node, 'error');
       this.stop();
       return;
     }
@@ -798,6 +1034,7 @@ export class WorkflowRunner {
         type: 'error',
         content: `Decision "${node.data.label}" has no outgoing connections.`,
       });
+      this.recordStepTelemetry(node, 'error');
       this.stop();
       return;
     }
@@ -851,6 +1088,11 @@ export class WorkflowRunner {
             type: 'system',
             content: `   → Taking "Yes" path`,
           });
+          // Record telemetry for decision
+          this.recordStepTelemetry(node, 'success', {
+            condition: node.data.condition,
+            conditionResult: true,
+          });
           setTimeout(() => {
             this.executeNode(yesEdge.target);
           }, 500);
@@ -859,6 +1101,11 @@ export class WorkflowRunner {
           this.addMessage({
             type: 'system',
             content: `   → Taking "No" path`,
+          });
+          // Record telemetry for decision
+          this.recordStepTelemetry(node, 'success', {
+            condition: node.data.condition,
+            conditionResult: false,
           });
           setTimeout(() => {
             this.executeNode(noEdge.target);
@@ -922,6 +1169,7 @@ export class WorkflowRunner {
         type: 'error',
         content: `Parallel "${node.data.label}" has no outgoing connections.`,
       });
+      this.recordStepTelemetry(node, 'error');
       this.stop();
       return;
     }
@@ -932,6 +1180,7 @@ export class WorkflowRunner {
         response: { branches: 1 },
         nodeType: 'parallel',
       });
+      this.recordStepTelemetry(node, 'success');
       setTimeout(() => {
         this.executeNode(edges[0].target);
       }, 500);
@@ -980,6 +1229,7 @@ export class WorkflowRunner {
         type: 'error',
         content: `Loop "${node.data.label}" has no outgoing connections.`,
       });
+      this.recordStepTelemetry(node, 'error', { loopIteration: currentCount + 1 });
       this.stop();
       return;
     }
@@ -995,6 +1245,8 @@ export class WorkflowRunner {
         response: { iteration: currentCount, maxReached: true, exited: true },
         nodeType: 'loop',
       });
+      
+      this.recordStepTelemetry(node, 'success', { loopIteration: currentCount });
       
       const exitEdge = edges.find((e) => e.sourceHandle === 'exit') || edges[1] || edges[0];
       if (exitEdge) {

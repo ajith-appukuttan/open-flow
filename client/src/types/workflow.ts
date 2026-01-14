@@ -43,10 +43,28 @@ export interface Workflow {
   id: string;
   name: string;
   description: string;
+  userId?: string;
   createdAt: string;
   updatedAt: string;
+  currentVersion?: number;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+}
+
+export interface WorkflowVersion {
+  version: number;
+  savedAt: string;
+  message?: string;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+}
+
+export interface WorkflowVersionListItem {
+  version: number;
+  savedAt: string;
+  message?: string;
+  nodeCount: number;
+  edgeCount: number;
 }
 
 export interface WorkflowValidationResult {

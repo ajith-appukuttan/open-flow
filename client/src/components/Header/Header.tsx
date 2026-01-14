@@ -14,6 +14,7 @@ import {
   Play,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../store/workflowStore';
+import UserMenu from '../Auth/UserMenu';
 
 export default function Header() {
   const {
@@ -193,6 +194,10 @@ export default function Header() {
         >
           {propertiesPanelOpen ? <PanelRightClose size={20} /> : <PanelRightOpen size={20} />}
         </button>
+
+        <div className="w-px h-6 bg-panel-border mx-2" />
+        
+        <UserMenu />
       </div>
     </header>
   );

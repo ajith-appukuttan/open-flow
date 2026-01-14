@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import WorkflowCanvas from './components/Canvas/WorkflowCanvas';
 import Toolbar from './components/Toolbar/Toolbar';
@@ -6,8 +7,27 @@ import PropertiesPanel from './components/PropertiesPanel/PropertiesPanel';
 import Header from './components/Header/Header';
 import Toast from './components/Toast/Toast';
 import TestDrawer from './components/TestDrawer/TestDrawer';
+import LoginPage from './components/Auth/LoginPage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useWorkflowStore } from './store/workflowStore';
+import { Loader2 } from 'lucide-react';
 
-function App() {
+function WorkflowDesigner() {
+  const { isGuest } = useAuth();
+  const { seedDemoWorkflowForGuest, loadWorkflows } = useWorkflowStore();
+
+  useEffect(() => {
+    // When entering as guest, seed the demo workflow then load workflows
+    if (isGuest) {
+      seedDemoWorkflowForGuest().then(() => {
+        loadWorkflows();
+      });
+    } else {
+      // For authenticated users, just load their workflows
+      loadWorkflows();
+    }
+  }, [isGuest, seedDemoWorkflowForGuest, loadWorkflows]);
+
   return (
     <ReactFlowProvider>
       <div className="h-full w-full flex flex-col bg-canvas-bg">
@@ -24,6 +44,35 @@ function App() {
         <Toast />
       </div>
     </ReactFlowProvider>
+  );
+}
+
+function AppContent() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-canvas-bg">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 size={40} className="animate-spin text-indigo-500" />
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  return <WorkflowDesigner />;
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

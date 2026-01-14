@@ -7,9 +7,10 @@ import {
   type EdgeChange,
   type Connection,
 } from '@xyflow/react';
-import type { Workflow, WorkflowNode, WorkflowEdge, WorkflowListItem, WorkflowValidationResult } from '../types/workflow';
+import type { Workflow, WorkflowNode, WorkflowEdge, WorkflowListItem, WorkflowValidationResult, WorkflowVersionListItem } from '../types/workflow';
 import * as api from '../api/workflowApi';
-import { WorkflowRunner, type TestMessage, type WorkflowRunnerState, type WorkflowContext } from '../services/workflowRunner';
+import { WorkflowRunner, type TestMessage, type WorkflowRunnerState, type WorkflowContext, type WorkflowTelemetry } from '../services/workflowRunner';
+import { DEMO_WORKFLOW_DATA, hasGuestDemoBeenSeeded, markGuestDemoAsSeeded } from '../data/demoWorkflow';
 
 interface WorkflowState {
   // Current workflow
@@ -39,6 +40,13 @@ interface WorkflowState {
   isTestPaused: boolean;
   workflowRunner: WorkflowRunner | null;
   workflowContext: WorkflowContext;
+  workflowTelemetry: WorkflowTelemetry | null;
+  
+  // Version state
+  versions: (WorkflowVersionListItem & { isCurrent: boolean })[];
+  selectedVersion: number | null;
+  isLoadingVersions: boolean;
+  sidebarTab: 'workflows' | 'versions';
   
   // Actions
   setWorkflow: (workflow: Workflow | null) => void;
@@ -64,6 +72,7 @@ interface WorkflowState {
   validateWorkflow: () => Promise<void>;
   exportWorkflow: () => void;
   importWorkflow: (json: string) => Promise<void>;
+  seedDemoWorkflowForGuest: () => Promise<void>;
   
   // UI actions
   toggleSidebar: () => void;
@@ -79,6 +88,13 @@ interface WorkflowState {
   resetTest: () => void;
   selectTestOption: (optionId: string) => void;
   continueTestLoop: (shouldContinue: boolean) => void;
+  
+  // Version actions
+  setSidebarTab: (tab: 'workflows' | 'versions') => void;
+  loadVersions: () => Promise<void>;
+  previewVersion: (version: number) => Promise<void>;
+  restoreVersion: (version: number) => Promise<void>;
+  clearVersionPreview: () => void;
 }
 
 const createDefaultWorkflow = (): Workflow => ({
@@ -121,6 +137,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   isTestPaused: false,
   workflowRunner: null,
   workflowContext: {},
+  workflowTelemetry: null,
+  
+  // Version initial state
+  versions: [],
+  selectedVersion: null,
+  isLoadingVersions: false,
+  sidebarTab: 'workflows',
 
   setWorkflow: (workflow) => set({ workflow, selectedNodeId: null, selectedEdgeId: null }),
 
@@ -226,6 +249,33 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ workflows, isLoading: false });
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
+    }
+  },
+
+  seedDemoWorkflowForGuest: async () => {
+    // Check if demo has already been seeded for this guest
+    if (hasGuestDemoBeenSeeded()) {
+      return;
+    }
+
+    try {
+      // Create the demo workflow
+      const workflow = await api.createWorkflow({
+        name: DEMO_WORKFLOW_DATA.name,
+        description: DEMO_WORKFLOW_DATA.description,
+        nodes: DEMO_WORKFLOW_DATA.nodes,
+        edges: DEMO_WORKFLOW_DATA.edges,
+      });
+      
+      // Mark as seeded so we don't create it again
+      markGuestDemoAsSeeded();
+      
+      // Load it as the current workflow and refresh the list
+      set({ workflow });
+      get().loadWorkflows();
+    } catch (err) {
+      console.error('Failed to seed demo workflow:', err);
+      // Don't set error - this is a background operation
     }
   },
 
@@ -393,6 +443,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         isTestRunning: runnerState.isRunning,
         isTestPaused: runnerState.isPaused,
         workflowContext: runnerState.context,
+        workflowTelemetry: runnerState.telemetry,
       });
     };
     
@@ -433,6 +484,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       isTestRunning: false,
       isTestPaused: false,
       workflowContext: {},
+      workflowTelemetry: null,
     });
   },
   
@@ -454,5 +506,76 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const { workflowRunner } = get();
     if (!workflowRunner) return;
     workflowRunner.continueLoop(shouldContinue);
+  },
+  
+  // Version actions
+  setSidebarTab: (tab) => set({ sidebarTab: tab }),
+  
+  loadVersions: async () => {
+    const { workflow } = get();
+    if (!workflow?.id) {
+      set({ versions: [] });
+      return;
+    }
+    
+    set({ isLoadingVersions: true });
+    try {
+      const versions = await api.getWorkflowVersions(workflow.id);
+      set({ versions, isLoadingVersions: false });
+    } catch (err) {
+      console.error('Failed to load versions:', err);
+      set({ versions: [], isLoadingVersions: false });
+    }
+  },
+  
+  previewVersion: async (version) => {
+    const { workflow } = get();
+    if (!workflow?.id) return;
+    
+    set({ isLoadingVersions: true, selectedVersion: version });
+    try {
+      const versionData = await api.getWorkflowVersion(workflow.id, version);
+      // Temporarily update the canvas with this version's data
+      set({
+        workflow: {
+          ...workflow,
+          nodes: versionData.nodes,
+          edges: versionData.edges,
+        },
+        isLoadingVersions: false,
+      });
+    } catch (err) {
+      console.error('Failed to preview version:', err);
+      set({ isLoadingVersions: false, selectedVersion: null });
+    }
+  },
+  
+  restoreVersion: async (version) => {
+    const { workflow } = get();
+    if (!workflow?.id) return;
+    
+    set({ isLoadingVersions: true });
+    try {
+      const restoredWorkflow = await api.restoreWorkflowVersion(workflow.id, version);
+      set({
+        workflow: restoredWorkflow,
+        selectedVersion: null,
+        isLoadingVersions: false,
+      });
+      // Reload versions to reflect the new current version
+      get().loadVersions();
+      get().loadWorkflows();
+    } catch (err) {
+      set({ error: (err as Error).message, isLoadingVersions: false });
+    }
+  },
+  
+  clearVersionPreview: () => {
+    const { workflow, selectedVersion } = get();
+    if (!workflow?.id || selectedVersion === null) return;
+    
+    // Reload the current version
+    set({ selectedVersion: null });
+    get().loadWorkflow(workflow.id);
   },
 }));
