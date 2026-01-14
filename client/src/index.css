@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0f0f23;
+  color: #e2e8f0;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e3f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a4a7a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5a5a8a;
+}
+
+/* React Flow customizations */
+.react-flow__background {
+  background-color: #0f0f23 !important;
+}
+
+.react-flow__controls {
+  background: #1e1e3f;
+  border: 1px solid #2d2d5a;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.react-flow__controls-button {
+  background: #1e1e3f;
+  border: none;
+  color: #a5b4fc;
+  width: 28px;
+  height: 28px;
+}
+
+.react-flow__controls-button:hover {
+  background: #2a2a50;
+}
+
+.react-flow__controls-button svg {
+  fill: #a5b4fc;
+}
+
+.react-flow__minimap {
+  background: #1e1e3f;
+  border: 1px solid #2d2d5a;
+  border-radius: 8px;
+}
+
+.react-flow__edge-path {
+  stroke: #6366f1;
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #a5b4fc;
+  stroke-width: 3;
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: #6366f1;
+  border: 2px solid #1e1e3f;
+}
+
+.react-flow__handle:hover {
+  background: #a5b4fc;
+}
+
+/* Animation for nodes */
+@keyframes nodeAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.workflow-node {
+  animation: nodeAppear 0.2s ease-out;
+}
+
+/* Glow effect for selected nodes */
+.node-selected {
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+}
+
+/* Toast animation */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Test drawer slide up animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Chat message fade in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Test mode - active node pulsing glow */
+@keyframes testNodePulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(99, 102, 241, 1)) drop-shadow(0 0 30px rgba(139, 92, 246, 0.6));
+  }
+}
+
+.test-node-active {
+  animation: testNodePulse 1.5s ease-in-out infinite;
+}
+
+/* Test mode - visited node indicator */
+.test-node-visited {
+  position: relative;
+}
+
+.test-node-visited::after {
+  content: '✓';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  background: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+  border: 2px solid #0f0f23;
+}
+
+/* Test mode - dimmed nodes */
+.test-mode-dimmed {
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.test-mode-dimmed:hover {
+  opacity: 0.7;
+}

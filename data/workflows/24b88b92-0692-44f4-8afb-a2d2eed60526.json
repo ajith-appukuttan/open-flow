@@ -1,0 +1,125 @@
+{
+  "id": "24b88b92-0692-44f4-8afb-a2d2eed60526",
+  "name": "Test Workflow",
+  "description": "A test workflow",
+  "createdAt": "2026-01-14T17:19:21.502Z",
+  "updatedAt": "2026-01-14T19:19:10.370Z",
+  "nodes": [
+    {
+      "id": "start-1",
+      "type": "start",
+      "position": {
+        "x": -360,
+        "y": -150
+      },
+      "data": {
+        "label": "Start"
+      },
+      "measured": {
+        "width": 120,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "action-1768411200131",
+      "type": "action",
+      "position": {
+        "x": -90,
+        "y": -150
+      },
+      "data": {
+        "label": "APICall",
+        "description": "Test Workflow",
+        "actionType": "api_call",
+        "apiConfig": {
+          "url": "https://jsonplaceholder.typicode.com/todos/",
+          "method": "GET",
+          "headers": [],
+          "body": "",
+          "queryParams": []
+        }
+      },
+      "measured": {
+        "width": 140,
+        "height": 64
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "end-1768411329113",
+      "type": "end",
+      "position": {
+        "x": 525,
+        "y": -120
+      },
+      "data": {
+        "label": "End"
+      },
+      "measured": {
+        "width": 120,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "decision-1768416825138",
+      "type": "decision",
+      "position": {
+        "x": 300,
+        "y": -180
+      },
+      "data": {
+        "label": "Check the Length",
+        "condition": "{{APICall.response}}.length ===200"
+      },
+      "measured": {
+        "width": 120,
+        "height": 120
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "start-1",
+      "target": "action-1768411200131",
+      "id": "edge-1768411233514",
+      "selected": false
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "action-1768411200131",
+      "target": "decision-1768416825138",
+      "id": "edge-1768417693724"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "decision-1768416825138",
+      "sourceHandle": "yes",
+      "target": "end-1768411329113",
+      "id": "edge-1768417706556",
+      "selected": false
+    }
+  ]
+}
