@@ -1,9 +1,11 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { GitMerge, Check } from 'lucide-react';
 import type { WorkflowNodeData } from '../types/workflow';
 
-const ParallelNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>) => {
+type ParallelNodeType = Node<WorkflowNodeData, 'parallel'>;
+
+const ParallelNode = memo(({ data, selected }: NodeProps<ParallelNodeType>) => {
   const { isTestActive, isTestVisited, isTestMode } = data;
   
   return (

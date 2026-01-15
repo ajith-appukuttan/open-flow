@@ -1,4 +1,4 @@
-import { Play, Square, Cog, GitBranch, GitMerge, RefreshCw, Trash2 } from 'lucide-react';
+import { Play, Square, Cog, GitBranch, GitMerge, RefreshCw, Trash2, FileInput } from 'lucide-react';
 import { useWorkflowStore } from '../../store/workflowStore';
 import type { NodeType } from '../../types/workflow';
 
@@ -52,6 +52,13 @@ const nodeTools: NodeToolItem[] = [
     icon: <RefreshCw size={16} />,
     color: 'from-orange-400 to-orange-500',
     description: 'Iteration',
+  },
+  {
+    type: 'form',
+    label: 'Form',
+    icon: <FileInput size={16} />,
+    color: 'from-violet-500 to-purple-600',
+    description: 'User Input',
   },
 ];
 

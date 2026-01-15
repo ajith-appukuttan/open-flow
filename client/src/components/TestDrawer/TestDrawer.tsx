@@ -24,6 +24,7 @@ export default function TestDrawer() {
     resetTest,
     selectTestOption,
     continueTestLoop,
+    submitForm,
   } = useWorkflowStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -74,11 +75,12 @@ export default function TestDrawer() {
   if (!testDrawerOpen) return null;
 
   const latestMessage = testMessages[testMessages.length - 1];
-  const hasOptions =
-    latestMessage?.options &&
-    (latestMessage.type === 'decision' ||
-      latestMessage.type === 'parallel' ||
-      latestMessage.type === 'loop');
+  const hasInteraction =
+    (latestMessage?.options &&
+      (latestMessage.type === 'decision' ||
+        latestMessage.type === 'parallel' ||
+        latestMessage.type === 'loop')) ||
+    latestMessage?.type === 'form';
 
   return (
     <div
@@ -184,7 +186,8 @@ export default function TestDrawer() {
               message={message}
               onSelectOption={selectTestOption}
               onContinueLoop={continueTestLoop}
-              isLatest={index === testMessages.length - 1 && hasOptions && isTestPaused}
+              onSubmitForm={submitForm}
+              isLatest={index === testMessages.length - 1 && hasInteraction && isTestPaused}
             />
           ))
         )}

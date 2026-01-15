@@ -1,0 +1,92 @@
+{
+  "id": "exec-1768440012325-3ff38032",
+  "workflowId": "a9e484ab-75a5-48e3-87f5-b23f2241e28b",
+  "workflowVersion": 1,
+  "workflowName": "Untitled Workflow",
+  "startedAt": "2026-01-15T01:19:53.632Z",
+  "completedAt": "2026-01-15T01:20:12.321Z",
+  "duration": 18689,
+  "status": "completed",
+  "steps": [
+    {
+      "nodeId": "start-1",
+      "nodeLabel": "Start",
+      "nodeType": "start",
+      "startedAt": "2026-01-15T01:19:54.135Z",
+      "completedAt": "2026-01-15T01:19:54.135Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "started": true
+      }
+    },
+    {
+      "nodeId": "form-1768439568761",
+      "nodeLabel": "User Input",
+      "nodeType": "form",
+      "startedAt": "2026-01-15T01:20:11.315Z",
+      "completedAt": "2026-01-15T01:20:11.315Z",
+      "duration": 0,
+      "status": "success",
+      "input": {
+        "formConfig": {
+          "title": "",
+          "description": "",
+          "components": [
+            {
+              "id": "component-1768439618325-3qg2gxo8y",
+              "type": "checkbox",
+              "name": "field_1768439618325",
+              "label": "Problem with Speaker",
+              "width": "half",
+              "required": true
+            }
+          ],
+          "submitLabel": "Submit"
+        }
+      },
+      "output": {
+        "formData": {
+          "field_1768439618325": true
+        }
+      }
+    },
+    {
+      "nodeId": "end-1768439736586",
+      "nodeLabel": "End",
+      "nodeType": "end",
+      "startedAt": "2026-01-15T01:20:12.320Z",
+      "completedAt": "2026-01-15T01:20:12.320Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "completed": true
+      }
+    }
+  ],
+  "context": {
+    "Start": {
+      "response": {
+        "started": true,
+        "timestamp": "2026-01-15T01:19:54.134Z"
+      },
+      "nodeType": "start",
+      "timestamp": "2026-01-15T01:19:54.134Z"
+    },
+    "User Input": {
+      "response": {
+        "field_1768439618325": true
+      },
+      "nodeType": "form",
+      "timestamp": "2026-01-15T01:20:11.315Z"
+    },
+    "End": {
+      "response": {
+        "completed": true,
+        "timestamp": "2026-01-15T01:20:12.320Z"
+      },
+      "nodeType": "end",
+      "timestamp": "2026-01-15T01:20:12.320Z"
+    }
+  }
+}

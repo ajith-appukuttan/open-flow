@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Play,
   Square,
@@ -11,14 +12,17 @@ import {
   User,
   Globe,
   BarChart3,
+  FileInput,
 } from 'lucide-react';
 import type { TestMessage, WorkflowTelemetry } from '../../services/workflowRunner';
-import type { NodeType } from '../../types/workflow';
+import type { NodeType, FormConfig } from '../../types/workflow';
+import FormComponentRenderer from '../FormBuilder/FormComponentRenderer';
 
 interface ChatMessageProps {
   message: TestMessage;
   onSelectOption?: (optionId: string) => void;
   onContinueLoop?: (shouldContinue: boolean) => void;
+  onSubmitForm?: (formData: Record<string, unknown>) => void;
   isLatest?: boolean;
 }
 
@@ -29,14 +33,59 @@ const nodeIcons: Record<NodeType, React.ReactNode> = {
   decision: <GitBranch size={14} />,
   parallel: <GitMerge size={14} />,
   loop: <RefreshCw size={14} />,
+  form: <FileInput size={14} />,
 };
 
 export default function ChatMessage({
   message,
   onSelectOption,
   onContinueLoop,
+  onSubmitForm,
   isLatest,
 }: ChatMessageProps) {
+  const [formValues, setFormValues] = useState<Record<string, unknown>>({});
+
+  const handleFormValueChange = (name: string, value: unknown) => {
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onSubmitForm) {
+      onSubmitForm(formValues);
+    }
+  };
+
+  const renderForm = (formConfig: FormConfig) => {
+    return (
+      <form onSubmit={handleFormSubmit} className="space-y-3 mt-3 ml-8">
+        {formConfig.components.map((component) => {
+          if (component.type === 'submit' || component.type === 'cancel') {
+            return null; // We'll add our own submit button
+          }
+          return (
+            <div key={component.id} className={component.width === 'half' ? 'w-1/2 inline-block pr-2' : 'w-full'}>
+              <FormComponentRenderer
+                component={component}
+                preview={true}
+                value={formValues[component.name]}
+                onChange={(value) => handleFormValueChange(component.name, value)}
+              />
+            </div>
+          );
+        })}
+        <div className="flex gap-2 pt-2">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            {formConfig.submitLabel || 'Submit'}
+          </button>
+        </div>
+      </form>
+    );
+  };
+
   const renderContent = () => {
     switch (message.type) {
       case 'system':
@@ -94,13 +143,13 @@ export default function ChatMessage({
                 {message.content}
               </span>
             </div>
-            {message.apiResponse?.data && (
+            {message.apiResponse?.data !== undefined && message.apiResponse?.data !== null ? (
               <pre className="mt-2 text-xs text-gray-400 bg-canvas-bg rounded p-2 overflow-auto max-h-32 font-mono">
                 {typeof message.apiResponse.data === 'string'
                   ? message.apiResponse.data
                   : JSON.stringify(message.apiResponse.data, null, 2)}
               </pre>
-            )}
+            ) : null}
           </div>
         );
 
@@ -215,6 +264,19 @@ export default function ChatMessage({
 
       case 'telemetry':
         return renderTelemetry(message.telemetry);
+
+      case 'form':
+        return (
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 bg-violet-500/20 text-violet-400">
+                <FileInput size={14} />
+              </div>
+              <span className="text-violet-300 font-medium">{message.content}</span>
+            </div>
+            {message.formConfig && isLatest && renderForm(message.formConfig)}
+          </div>
+        );
 
       default:
         return <span className="text-gray-300">{message.content}</span>;

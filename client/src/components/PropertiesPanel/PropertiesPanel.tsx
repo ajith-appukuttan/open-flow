@@ -15,11 +15,11 @@ import {
   AlertCircle,
   Braces,
   Copy,
-  Info,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../store/workflowStore';
 import KeyValueEditor from './KeyValueEditor';
-import type { WorkflowNodeData, NodeType, ApiConfig, KeyValuePair, HttpMethod, WorkflowNode, WorkflowEdge } from '../../types/workflow';
+import FormBuilder from '../FormBuilder/FormBuilder';
+import type { WorkflowNodeData, NodeType, ApiConfig, KeyValuePair, HttpMethod, WorkflowNode, WorkflowEdge, FormConfig } from '../../types/workflow';
 
 const nodeTypeLabels: Record<NodeType, { label: string; icon: React.ReactNode }> = {
   start: { label: 'Start Node', icon: <div className="w-3 h-3 rounded-full bg-emerald-500" /> },
@@ -28,6 +28,7 @@ const nodeTypeLabels: Record<NodeType, { label: string; icon: React.ReactNode }>
   decision: { label: 'Decision Node', icon: <div className="w-3 h-3 rotate-45 bg-amber-500" /> },
   parallel: { label: 'Parallel Node', icon: <div className="w-3 h-3 rounded bg-purple-500" /> },
   loop: { label: 'Loop Node', icon: <div className="w-3 h-3 rounded-full bg-orange-500" /> },
+  form: { label: 'Form Node', icon: <div className="w-3 h-3 rounded bg-violet-500" /> },
 };
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
@@ -182,7 +183,11 @@ export default function PropertiesPanel() {
 
   useEffect(() => {
     if (selectedEdge) {
-      setEdgeLabel(selectedEdge.label || selectedEdge.data?.label || '');
+      // Edge label can be a string or React node, we only want strings
+      const label = typeof selectedEdge.label === 'string' 
+        ? selectedEdge.label 
+        : (selectedEdge.data?.label as string | undefined) || '';
+      setEdgeLabel(label);
     } else {
       setEdgeLabel('');
     }
@@ -283,6 +288,20 @@ export default function PropertiesPanel() {
 
   const hasSelection = selectedNode || selectedEdge;
   const isApiAction = selectedNode?.type === 'action' && nodeData.actionType === 'api_call';
+  const isFormNode = selectedNode?.type === 'form';
+
+  const defaultFormConfig: FormConfig = {
+    title: '',
+    description: '',
+    components: [],
+    submitLabel: 'Submit',
+  };
+
+  const handleFormConfigChange = (newConfig: FormConfig) => {
+    if (selectedNodeId) {
+      updateNodeData(selectedNodeId, { formConfig: newConfig });
+    }
+  };
 
   return (
     <aside className="w-80 bg-panel-bg border-l border-panel-border flex flex-col shrink-0">
@@ -657,6 +676,16 @@ export default function PropertiesPanel() {
                 min={2}
                 max={10}
                 className="w-full bg-canvas-bg border border-panel-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500"
+              />
+            </div>
+          )}
+
+          {/* Form-specific fields - Form Builder */}
+          {isFormNode && (
+            <div className="pt-4 border-t border-panel-border -mx-4 -mb-4">
+              <FormBuilder
+                config={selectedNode.data.formConfig || defaultFormConfig}
+                onChange={handleFormConfigChange}
               />
             </div>
           )}

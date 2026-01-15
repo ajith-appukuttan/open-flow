@@ -1,7 +1,7 @@
-import type { Workflow, WorkflowNode, WorkflowEdge, NodeType, ApiConfig, KeyValuePair, WorkflowExecution, ExecutionStep, ExecutionStatus } from '../types/workflow';
+import type { Workflow, WorkflowNode, WorkflowEdge, NodeType, ApiConfig, KeyValuePair, ExecutionStatus, FormConfig, ExecutionStep } from '../types/workflow';
 import * as api from '../api/workflowApi';
 
-export type MessageType = 'system' | 'node' | 'decision' | 'user' | 'success' | 'error' | 'loop' | 'parallel' | 'api' | 'api_response' | 'telemetry';
+export type MessageType = 'system' | 'node' | 'decision' | 'user' | 'success' | 'error' | 'loop' | 'parallel' | 'api' | 'api_response' | 'telemetry' | 'form';
 
 export interface TestMessage {
   id: string;
@@ -18,6 +18,9 @@ export interface TestMessage {
     error?: string;
   };
   telemetry?: WorkflowTelemetry;
+  // Form-specific fields
+  formConfig?: FormConfig;
+  formMessageId?: string;
 }
 
 // Context entry for storing node outputs
@@ -131,8 +134,8 @@ function resolveVariables(template: string, context: WorkflowContext): string {
     
     // Split into node label and property path
     // Handle node labels with spaces by finding the first known context key
-    let nodeLabel: string | null = null;
-    let propertyPath: string = '';
+    let nodeLabel = '';
+    let propertyPath = '';
     
     // Try to find a matching node label in context
     const contextKeys = Object.keys(context);
@@ -144,7 +147,7 @@ function resolveVariables(template: string, context: WorkflowContext): string {
       }
     }
     
-    if (!nodeLabel) {
+    if (nodeLabel === '') {
       // Fallback: try splitting by first dot
       const firstDot = trimmedPath.indexOf('.');
       if (firstDot > 0) {
@@ -156,7 +159,7 @@ function resolveVariables(template: string, context: WorkflowContext): string {
       }
     }
     
-    const nodeOutput = context[nodeLabel];
+    const nodeOutput = nodeLabel ? context[nodeLabel] : undefined;
     if (!nodeOutput) {
       // Return original if node not found
       return match;
@@ -624,8 +627,8 @@ export class WorkflowRunner {
     if (!selectedEdge) {
       // Try to find by label
       const edgeByLabel = edges.find(
-        (e) => e.label?.toLowerCase() === optionId.toLowerCase() || 
-               e.data?.label?.toLowerCase() === optionId.toLowerCase()
+        (e) => (typeof e.label === 'string' && e.label.toLowerCase() === optionId.toLowerCase()) || 
+               (typeof e.data?.label === 'string' && e.data.label.toLowerCase() === optionId.toLowerCase())
       );
       if (edgeByLabel) {
         this.addMessage({
@@ -824,6 +827,9 @@ export class WorkflowRunner {
         break;
       case 'loop':
         this.handleLoopNode(node);
+        break;
+      case 'form':
+        this.handleFormNode(node);
         break;
       default:
         this.addMessage({
@@ -1243,7 +1249,13 @@ export class WorkflowRunner {
     // No condition or evaluation failed - prompt user to select
     // Generate options from edges
     const options = edges.map((edge, index) => {
-      const label = edge.label || edge.data?.label || edge.sourceHandle || `Option ${index + 1}`;
+      // Get label as string, handling various types
+      let label = edge.sourceHandle || `Option ${index + 1}`;
+      if (typeof edge.label === 'string') {
+        label = edge.label;
+      } else if (typeof edge.data?.label === 'string') {
+        label = edge.data.label;
+      }
       return {
         id: edge.sourceHandle || edge.id,
         label: label.charAt(0).toUpperCase() + label.slice(1),
@@ -1301,10 +1313,18 @@ export class WorkflowRunner {
     }
 
     // Multiple branches - let user choose which to simulate
-    const options = edges.map((edge, index) => ({
-      id: edge.sourceHandle || edge.id,
-      label: edge.label || edge.data?.label || `Branch ${index + 1}`,
-    }));
+    const options = edges.map((edge, index) => {
+      let label = `Branch ${index + 1}`;
+      if (typeof edge.label === 'string') {
+        label = edge.label;
+      } else if (typeof edge.data?.label === 'string') {
+        label = edge.data.label;
+      }
+      return {
+        id: edge.sourceHandle || edge.id,
+        label,
+      };
+    });
 
     this.addMessage({
       type: 'parallel',
@@ -1382,6 +1402,88 @@ export class WorkflowRunner {
     });
 
     this.updateState({ isPaused: true });
+  }
+
+  private handleFormNode(node: WorkflowNode) {
+    const formConfig = node.data.formConfig;
+    
+    if (!formConfig || formConfig.components.length === 0) {
+      this.addMessage({
+        type: 'error',
+        content: `Form "${node.data.label}" has no components configured.`,
+      });
+      this.recordStepTelemetry(node, 'error');
+      this.stop();
+      return;
+    }
+
+    // Generate a unique message ID for this form
+    const formMessageId = `form-${node.id}-${Date.now()}`;
+
+    this.addMessage({
+      type: 'form',
+      content: `📝 ${formConfig.title || node.data.label}`,
+      nodeId: node.id,
+      nodeType: 'form',
+      formConfig: formConfig,
+      formMessageId: formMessageId,
+    });
+
+    if (formConfig.description) {
+      this.addMessage({
+        type: 'system',
+        content: `   ${formConfig.description}`,
+      });
+    }
+
+    // Pause and wait for form submission
+    this.updateState({ isPaused: true });
+  }
+
+  submitForm(formData: Record<string, unknown>) {
+    if (!this.state.isPaused || !this.state.currentNodeId) return;
+
+    const currentNode = this.getNode(this.state.currentNodeId);
+    if (!currentNode || currentNode.type !== 'form') return;
+
+    // Display submitted values
+    this.addMessage({
+      type: 'user',
+      content: `✓ Form submitted`,
+    });
+
+    // Store the form data in context
+    this.storeNodeOutput(currentNode.data.label, {
+      response: formData,
+      nodeType: 'form',
+    });
+
+    // Record telemetry
+    this.recordStepTelemetry(currentNode, 'success');
+
+    // Record execution step
+    this.recordExecutionStep(
+      currentNode,
+      'success',
+      { formConfig: currentNode.data.formConfig },
+      { formData }
+    );
+
+    const edges = this.getOutgoingEdges(this.state.currentNodeId);
+    if (edges.length === 0) {
+      this.addMessage({
+        type: 'error',
+        content: `Form "${currentNode.data.label}" has no outgoing connections. Workflow cannot continue.`,
+      });
+      this.stop();
+      return;
+    }
+
+    // Continue to next node
+    this.updateState({ isPaused: false });
+    setTimeout(() => {
+      this.executeNode(edges[0].target);
+    }, 500);
   }
 }
 

@@ -19,6 +19,7 @@ import ActionNode from '../../nodes/ActionNode';
 import DecisionNode from '../../nodes/DecisionNode';
 import ParallelNode from '../../nodes/ParallelNode';
 import LoopNode from '../../nodes/LoopNode';
+import FormNode from '../../nodes/FormNode';
 import type { WorkflowNode, NodeType } from '../../types/workflow';
 
 const nodeTypes: NodeTypes = {
@@ -28,13 +29,14 @@ const nodeTypes: NodeTypes = {
   decision: DecisionNode,
   parallel: ParallelNode,
   loop: LoopNode,
+  form: FormNode,
 };
 
 const edgeTypes: EdgeTypes = {
   smoothstep: SmoothStepEdge,
 };
 
-const nodeColor = (node: WorkflowNode): string => {
+const nodeColor = (node: { type?: string }): string => {
   const colors: Record<NodeType, string> = {
     start: '#10b981',
     end: '#ef4444',
@@ -42,6 +44,7 @@ const nodeColor = (node: WorkflowNode): string => {
     decision: '#f59e0b',
     parallel: '#8b5cf6',
     loop: '#f97316',
+    form: '#7c3aed',
   };
   return colors[node.type as NodeType] || '#6366f1';
 };
@@ -87,6 +90,7 @@ export default function WorkflowCanvas() {
         decision: 'Decision',
         parallel: 'Parallel',
         loop: 'Loop',
+        form: 'User Input',
       };
 
       const newNode: WorkflowNode = {

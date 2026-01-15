@@ -1,6 +1,6 @@
 import type { Node, Edge } from '@xyflow/react';
 
-export type NodeType = 'start' | 'end' | 'action' | 'decision' | 'parallel' | 'loop';
+export type NodeType = 'start' | 'end' | 'action' | 'decision' | 'parallel' | 'loop' | 'form';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -17,7 +17,54 @@ export interface ApiConfig {
   queryParams: KeyValuePair[];
 }
 
+// Form Builder Types
+export type FormComponentType = 
+  | 'text' | 'textarea' | 'number' | 'email' | 'password' | 'date' | 'file'
+  | 'select' | 'multiselect' | 'radio' | 'checkbox' | 'toggle' | 'slider'
+  | 'label' | 'divider' | 'card' | 'image'
+  | 'submit' | 'cancel';
+
+export interface FormComponentOption {
+  label: string;
+  value: string;
+}
+
+export interface FormComponentValidation {
+  min?: number;
+  max?: number;
+  pattern?: string;
+  minLength?: number;
+  maxLength?: number;
+}
+
+export interface FormComponent {
+  id: string;
+  type: FormComponentType;
+  label?: string;
+  name: string;
+  placeholder?: string;
+  defaultValue?: string;
+  required?: boolean;
+  options?: FormComponentOption[];
+  validation?: FormComponentValidation;
+  width?: 'full' | 'half';
+  // For image component
+  src?: string;
+  alt?: string;
+  // For card/section
+  children?: FormComponent[];
+}
+
+export interface FormConfig {
+  title?: string;
+  description?: string;
+  components: FormComponent[];
+  submitLabel?: string;
+  cancelLabel?: string;
+}
+
 export interface WorkflowNodeData {
+  [key: string]: unknown;
   label: string;
   description?: string;
   // Decision node specific
@@ -30,6 +77,8 @@ export interface WorkflowNodeData {
   loopCondition?: string;
   // Parallel node specific
   branches?: number;
+  // Form node specific
+  formConfig?: FormConfig;
   // Test mode state (injected by canvas)
   isTestActive?: boolean;
   isTestVisited?: boolean;

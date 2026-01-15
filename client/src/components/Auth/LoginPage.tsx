@@ -20,7 +20,7 @@ export default function LoginPage() {
             <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <Workflow size={32} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Workflow Designer</h1>
+            <h1 className="text-2xl font-bold text-white">Open-Flow Designer</h1>
             <p className="text-gray-400 text-sm mt-2 text-center">
               Create, test, and manage your workflows visually
             </p>

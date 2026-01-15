@@ -1,9 +1,11 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { GitBranch, Check } from 'lucide-react';
 import type { WorkflowNodeData } from '../types/workflow';
 
-const DecisionNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>) => {
+type DecisionNodeType = Node<WorkflowNodeData, 'decision'>;
+
+const DecisionNode = memo(({ data, selected }: NodeProps<DecisionNodeType>) => {
   const { isTestActive, isTestVisited, isTestMode } = data;
   
   // Diamond size

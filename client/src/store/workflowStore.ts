@@ -93,6 +93,7 @@ interface WorkflowState {
   resetTest: () => void;
   selectTestOption: (optionId: string) => void;
   continueTestLoop: (shouldContinue: boolean) => void;
+  submitForm: (formData: Record<string, unknown>) => void;
   
   // Version actions
   setSidebarTab: (tab: 'workflows' | 'versions' | 'executions') => void;
@@ -522,6 +523,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const { workflowRunner } = get();
     if (!workflowRunner) return;
     workflowRunner.continueLoop(shouldContinue);
+  },
+  
+  submitForm: (formData) => {
+    const { workflowRunner } = get();
+    if (!workflowRunner) return;
+    workflowRunner.submitForm(formData);
   },
   
   // Version actions

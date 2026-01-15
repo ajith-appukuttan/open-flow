@@ -1,9 +1,11 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { RefreshCw, Check } from 'lucide-react';
 import type { WorkflowNodeData } from '../types/workflow';
 
-const LoopNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>) => {
+type LoopNodeType = Node<WorkflowNodeData, 'loop'>;
+
+const LoopNode = memo(({ data, selected }: NodeProps<LoopNodeType>) => {
   const { isTestActive, isTestVisited, isTestMode } = data;
   
   return (

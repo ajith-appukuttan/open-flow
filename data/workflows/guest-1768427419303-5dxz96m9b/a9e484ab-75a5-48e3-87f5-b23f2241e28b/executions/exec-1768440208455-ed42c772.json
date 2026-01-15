@@ -1,0 +1,114 @@
+{
+  "id": "exec-1768440208455-ed42c772",
+  "workflowId": "a9e484ab-75a5-48e3-87f5-b23f2241e28b",
+  "workflowVersion": 2,
+  "workflowName": "Untitled Workflow",
+  "startedAt": "2026-01-15T01:22:48.730Z",
+  "completedAt": "2026-01-15T01:23:28.447Z",
+  "duration": 39717,
+  "status": "cancelled",
+  "steps": [
+    {
+      "nodeId": "start-1",
+      "nodeLabel": "Start",
+      "nodeType": "start",
+      "startedAt": "2026-01-15T01:22:49.232Z",
+      "completedAt": "2026-01-15T01:22:49.232Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "started": true
+      }
+    },
+    {
+      "nodeId": "form-1768439568761",
+      "nodeLabel": "User Input",
+      "nodeType": "form",
+      "startedAt": "2026-01-15T01:23:01.880Z",
+      "completedAt": "2026-01-15T01:23:01.880Z",
+      "duration": 0,
+      "status": "success",
+      "input": {
+        "formConfig": {
+          "title": "",
+          "description": "",
+          "components": [
+            {
+              "id": "component-1768440126197-1yup4kt6g",
+              "type": "checkbox",
+              "name": "field_1768440126197",
+              "label": "Water Damage",
+              "width": "half",
+              "defaultValue": "liquid_damage"
+            },
+            {
+              "id": "component-1768440057315-448i1jv4g",
+              "type": "checkbox",
+              "name": "field_1768440057315",
+              "label": "Problem with Port",
+              "width": "half",
+              "defaultValue": "port_problem"
+            },
+            {
+              "id": "component-1768439618325-3qg2gxo8y",
+              "type": "checkbox",
+              "name": "field_1768439618325",
+              "label": "Problem with Speaker",
+              "width": "half",
+              "required": false,
+              "defaultValue": "speaker_problem"
+            }
+          ],
+          "submitLabel": "Submit"
+        }
+      },
+      "output": {
+        "formData": {
+          "field_1768440126197": true,
+          "field_1768439618325": true,
+          "field_1768440057315": true
+        }
+      }
+    },
+    {
+      "nodeId": "end-1768439736586",
+      "nodeLabel": "End",
+      "nodeType": "end",
+      "startedAt": "2026-01-15T01:23:02.883Z",
+      "completedAt": "2026-01-15T01:23:02.883Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "completed": true
+      }
+    }
+  ],
+  "context": {
+    "Start": {
+      "response": {
+        "started": true,
+        "timestamp": "2026-01-15T01:22:49.232Z"
+      },
+      "nodeType": "start",
+      "timestamp": "2026-01-15T01:22:49.232Z"
+    },
+    "User Input": {
+      "response": {
+        "field_1768440126197": true,
+        "field_1768439618325": true,
+        "field_1768440057315": true
+      },
+      "nodeType": "form",
+      "timestamp": "2026-01-15T01:23:01.880Z"
+    },
+    "End": {
+      "response": {
+        "completed": true,
+        "timestamp": "2026-01-15T01:23:02.882Z"
+      },
+      "nodeType": "end",
+      "timestamp": "2026-01-15T01:23:02.882Z"
+    }
+  },
+  "error": "Execution stopped by user"
+}
