@@ -7,7 +7,7 @@ import {
   type EdgeChange,
   type Connection,
 } from '@xyflow/react';
-import type { Workflow, WorkflowNode, WorkflowEdge, WorkflowListItem, WorkflowValidationResult, WorkflowVersionListItem } from '../types/workflow';
+import type { Workflow, WorkflowNode, WorkflowEdge, WorkflowListItem, WorkflowValidationResult, WorkflowVersionListItem, ExecutionListItem, WorkflowExecution } from '../types/workflow';
 import * as api from '../api/workflowApi';
 import { WorkflowRunner, type TestMessage, type WorkflowRunnerState, type WorkflowContext, type WorkflowTelemetry } from '../services/workflowRunner';
 import { DEMO_WORKFLOW_DATA, hasGuestDemoBeenSeeded, markGuestDemoAsSeeded } from '../data/demoWorkflow';
@@ -46,7 +46,12 @@ interface WorkflowState {
   versions: (WorkflowVersionListItem & { isCurrent: boolean })[];
   selectedVersion: number | null;
   isLoadingVersions: boolean;
-  sidebarTab: 'workflows' | 'versions';
+  sidebarTab: 'workflows' | 'versions' | 'executions';
+  
+  // Execution state
+  executions: ExecutionListItem[];
+  selectedExecution: WorkflowExecution | null;
+  isLoadingExecutions: boolean;
   
   // Actions
   setWorkflow: (workflow: Workflow | null) => void;
@@ -90,11 +95,17 @@ interface WorkflowState {
   continueTestLoop: (shouldContinue: boolean) => void;
   
   // Version actions
-  setSidebarTab: (tab: 'workflows' | 'versions') => void;
+  setSidebarTab: (tab: 'workflows' | 'versions' | 'executions') => void;
   loadVersions: () => Promise<void>;
   previewVersion: (version: number) => Promise<void>;
   restoreVersion: (version: number) => Promise<void>;
   clearVersionPreview: () => void;
+  
+  // Execution actions
+  loadExecutions: () => Promise<void>;
+  viewExecution: (executionId: string) => Promise<void>;
+  clearExecutionView: () => void;
+  deleteExecution: (executionId: string) => Promise<void>;
 }
 
 const createDefaultWorkflow = (): Workflow => ({
@@ -144,6 +155,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   selectedVersion: null,
   isLoadingVersions: false,
   sidebarTab: 'workflows',
+  
+  // Execution initial state
+  executions: [],
+  selectedExecution: null,
+  isLoadingExecutions: false,
 
   setWorkflow: (workflow) => set({ workflow, selectedNodeId: null, selectedEdgeId: null }),
 
@@ -577,5 +593,54 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     // Reload the current version
     set({ selectedVersion: null });
     get().loadWorkflow(workflow.id);
+  },
+  
+  // Execution actions
+  loadExecutions: async () => {
+    const { workflow } = get();
+    if (!workflow?.id) {
+      set({ executions: [] });
+      return;
+    }
+    
+    set({ isLoadingExecutions: true });
+    try {
+      const executions = await api.getExecutions(workflow.id);
+      set({ executions, isLoadingExecutions: false });
+    } catch (err) {
+      console.error('Failed to load executions:', err);
+      set({ executions: [], isLoadingExecutions: false });
+    }
+  },
+  
+  viewExecution: async (executionId) => {
+    const { workflow } = get();
+    if (!workflow?.id) return;
+    
+    set({ isLoadingExecutions: true });
+    try {
+      const execution = await api.getExecution(workflow.id, executionId);
+      set({ selectedExecution: execution, isLoadingExecutions: false });
+    } catch (err) {
+      console.error('Failed to load execution:', err);
+      set({ isLoadingExecutions: false, error: (err as Error).message });
+    }
+  },
+  
+  clearExecutionView: () => {
+    set({ selectedExecution: null });
+  },
+  
+  deleteExecution: async (executionId) => {
+    const { workflow } = get();
+    if (!workflow?.id) return;
+    
+    try {
+      await api.deleteExecution(workflow.id, executionId);
+      // Reload executions
+      get().loadExecutions();
+    } catch (err) {
+      set({ error: (err as Error).message });
+    }
   },
 }));

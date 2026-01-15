@@ -1,4 +1,4 @@
-import type { Workflow, WorkflowListItem, WorkflowValidationResult, WorkflowVersion, WorkflowVersionListItem } from '../types/workflow';
+import type { Workflow, WorkflowListItem, WorkflowValidationResult, WorkflowVersion, WorkflowVersionListItem, WorkflowExecution, ExecutionListItem } from '../types/workflow';
 import { auth } from '../config/firebase';
 
 const API_BASE = '/api';
@@ -104,4 +104,39 @@ export async function restoreWorkflowVersion(workflowId: string, version: number
     method: 'POST',
   });
   return handleResponse<Workflow>(response);
+}
+
+// Execution API functions
+
+export async function getExecutions(workflowId: string): Promise<ExecutionListItem[]> {
+  const userId = getCurrentUserId();
+  const response = await fetch(`${API_BASE}/workflows/${workflowId}/executions?userId=${userId}`);
+  return handleResponse<ExecutionListItem[]>(response);
+}
+
+export async function getExecution(workflowId: string, executionId: string): Promise<WorkflowExecution> {
+  const userId = getCurrentUserId();
+  const response = await fetch(`${API_BASE}/workflows/${workflowId}/executions/${executionId}?userId=${userId}`);
+  return handleResponse<WorkflowExecution>(response);
+}
+
+export async function saveExecution(workflowId: string, execution: Omit<WorkflowExecution, 'id' | 'workflowId'>): Promise<WorkflowExecution> {
+  const userId = getCurrentUserId();
+  const response = await fetch(`${API_BASE}/workflows/${workflowId}/executions?userId=${userId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(execution),
+  });
+  return handleResponse<WorkflowExecution>(response);
+}
+
+export async function deleteExecution(workflowId: string, executionId: string): Promise<void> {
+  const userId = getCurrentUserId();
+  const response = await fetch(`${API_BASE}/workflows/${workflowId}/executions/${executionId}?userId=${userId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Delete failed' }));
+    throw new Error(error.message);
+  }
 }

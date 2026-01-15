@@ -7,6 +7,7 @@ import PropertiesPanel from './components/PropertiesPanel/PropertiesPanel';
 import Header from './components/Header/Header';
 import Toast from './components/Toast/Toast';
 import TestDrawer from './components/TestDrawer/TestDrawer';
+import ExecutionViewer from './components/ExecutionViewer/ExecutionViewer';
 import LoginPage from './components/Auth/LoginPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useWorkflowStore } from './store/workflowStore';
@@ -42,6 +43,7 @@ function WorkflowDesigner() {
           <PropertiesPanel />
         </div>
         <Toast />
+        <ExecutionViewer />
       </div>
     </ReactFlowProvider>
   );

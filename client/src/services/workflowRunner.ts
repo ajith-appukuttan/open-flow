@@ -1,4 +1,5 @@
-import type { Workflow, WorkflowNode, WorkflowEdge, NodeType, ApiConfig, KeyValuePair } from '../types/workflow';
+import type { Workflow, WorkflowNode, WorkflowEdge, NodeType, ApiConfig, KeyValuePair, WorkflowExecution, ExecutionStep, ExecutionStatus } from '../types/workflow';
+import * as api from '../api/workflowApi';
 
 export type MessageType = 'system' | 'node' | 'decision' | 'user' | 'success' | 'error' | 'loop' | 'parallel' | 'api' | 'api_response' | 'telemetry';
 
@@ -77,6 +78,10 @@ export interface WorkflowRunnerState {
   context: WorkflowContext;
   telemetry: WorkflowTelemetry | null;
   currentStepStartTime: Date | null;
+  // Execution tracking
+  executionSteps: ExecutionStep[];
+  executionStartTime: Date | null;
+  executionStatus: ExecutionStatus;
 }
 
 /**
@@ -252,6 +257,9 @@ export class WorkflowRunner {
       context: {},
       telemetry: null,
       currentStepStartTime: null,
+      executionSteps: [],
+      executionStartTime: null,
+      executionStatus: 'running',
     };
   }
 
@@ -309,6 +317,67 @@ export class WorkflowRunner {
         },
         currentStepStartTime: null,
       });
+    }
+  }
+
+  // Record execution step for persistence
+  private recordExecutionStep(
+    node: WorkflowNode,
+    status: 'success' | 'failed' | 'skipped',
+    input?: Record<string, unknown>,
+    output?: Record<string, unknown>,
+    error?: string,
+    metadata?: Record<string, unknown>
+  ): void {
+    const endTime = new Date();
+    const startTime = this.state.currentStepStartTime || endTime;
+    const duration = endTime.getTime() - startTime.getTime();
+
+    const step: ExecutionStep = {
+      nodeId: node.id,
+      nodeLabel: node.data.label,
+      nodeType: node.type as NodeType,
+      startedAt: startTime.toISOString(),
+      completedAt: endTime.toISOString(),
+      duration,
+      status,
+      input,
+      output,
+      error,
+      metadata,
+    };
+
+    this.updateState({
+      executionSteps: [...this.state.executionSteps, step],
+    });
+  }
+
+  // Save execution to server
+  private async saveExecution(status: ExecutionStatus, error?: string): Promise<void> {
+    if (!this.workflow.id) {
+      console.log('Workflow not saved, skipping execution persistence');
+      return;
+    }
+
+    const endTime = new Date();
+    const startTime = this.state.executionStartTime || endTime;
+    const duration = endTime.getTime() - startTime.getTime();
+
+    try {
+      await api.saveExecution(this.workflow.id, {
+        workflowVersion: this.workflow.currentVersion || 1,
+        workflowName: this.workflow.name,
+        startedAt: startTime.toISOString(),
+        completedAt: endTime.toISOString(),
+        duration,
+        status,
+        steps: this.state.executionSteps,
+        context: this.state.context as Record<string, unknown>,
+        error,
+      });
+      console.log('Execution saved successfully');
+    } catch (err) {
+      console.error('Failed to save execution:', err);
     }
   }
 
@@ -485,6 +554,9 @@ export class WorkflowRunner {
       context: {},
       telemetry,
       currentStepStartTime: null,
+      executionSteps: [],
+      executionStartTime: new Date(),
+      executionStatus: 'running',
     });
 
     this.addMessage({
@@ -504,7 +576,10 @@ export class WorkflowRunner {
       isRunning: false,
       isPaused: false,
       currentNodeId: null,
+      executionStatus: 'cancelled',
     });
+    // Save the cancelled execution
+    this.saveExecution('cancelled', 'Execution stopped by user');
   }
 
   reset() {
@@ -518,6 +593,9 @@ export class WorkflowRunner {
       context: {},
       telemetry: null,
       currentStepStartTime: null,
+      executionSteps: [],
+      executionStartTime: null,
+      executionStatus: 'running',
     });
   }
 
@@ -777,12 +855,17 @@ export class WorkflowRunner {
         content: 'Start node has no outgoing connections',
       });
       this.recordStepTelemetry(node, 'error');
+      this.recordExecutionStep(node, 'failed', undefined, undefined, 'No outgoing connections');
+      this.saveExecution('failed', 'Start node has no outgoing connections');
       this.stop();
       return;
     }
 
     // Record telemetry for start node
     this.recordStepTelemetry(node, 'success');
+
+    // Record execution step
+    this.recordExecutionStep(node, 'success', undefined, { started: true });
 
     this.executeNode(edges[0].target);
   }
@@ -796,6 +879,14 @@ export class WorkflowRunner {
 
     // Record telemetry for end node
     this.recordStepTelemetry(node, 'success');
+
+    // Record execution step for end node
+    this.recordExecutionStep(
+      node,
+      'success',
+      undefined,
+      { completed: true }
+    );
 
     // Finalize telemetry
     this.finalizeTelemetry();
@@ -813,7 +904,11 @@ export class WorkflowRunner {
     this.updateState({
       isRunning: false,
       isPaused: false,
+      executionStatus: 'completed',
     });
+
+    // Save the completed execution
+    this.saveExecution('completed');
   }
 
   private async executeApiCall(apiConfig: ApiConfig): Promise<{
@@ -964,6 +1059,16 @@ export class WorkflowRunner {
         apiStatus: response.status,
       });
 
+      // Record execution step with full details
+      this.recordExecutionStep(
+        node,
+        isSuccess ? 'success' : 'failed',
+        { apiConfig: resolvedConfig },
+        { status: response.status, statusText: response.statusText, data: response.data },
+        response.error,
+        { apiUrl: resolvedConfig.url, apiMethod: resolvedConfig.method, statusCode: response.status }
+      );
+
     } else {
       // Handle regular action
       this.addMessage({
@@ -1001,6 +1106,14 @@ export class WorkflowRunner {
 
       // Record telemetry for non-API action
       this.recordStepTelemetry(node, 'success');
+
+      // Record execution step
+      this.recordExecutionStep(
+        node,
+        'success',
+        { actionType: node.data.actionType, description: node.data.description },
+        { executed: true }
+      );
     }
 
     const edges = this.getOutgoingEdges(node.id);

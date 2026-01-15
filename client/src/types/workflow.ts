@@ -81,3 +81,45 @@ export interface WorkflowListItem {
   updatedAt: string;
   nodeCount: number;
 }
+
+// Execution tracking types
+export type ExecutionStatus = 'running' | 'completed' | 'failed' | 'cancelled';
+
+export interface ExecutionStep {
+  nodeId: string;
+  nodeLabel: string;
+  nodeType: NodeType;
+  startedAt: string;
+  completedAt?: string;
+  duration?: number;
+  status: 'success' | 'failed' | 'skipped';
+  input?: Record<string, unknown>;
+  output?: Record<string, unknown>;
+  error?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  workflowVersion: number;
+  workflowName: string;
+  startedAt: string;
+  completedAt?: string;
+  duration?: number;
+  status: ExecutionStatus;
+  steps: ExecutionStep[];
+  context: Record<string, unknown>;
+  error?: string;
+}
+
+export interface ExecutionListItem {
+  id: string;
+  workflowVersion: number;
+  startedAt: string;
+  completedAt?: string;
+  duration?: number;
+  status: ExecutionStatus;
+  stepCount: number;
+  error?: string;
+}

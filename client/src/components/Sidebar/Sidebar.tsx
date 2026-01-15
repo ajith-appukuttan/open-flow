@@ -11,9 +11,11 @@ import {
   ChevronRight,
   History,
   FolderOpen,
+  Play,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../store/workflowStore';
 import VersionHistory from './VersionHistory';
+import ExecutionHistory from './ExecutionHistory';
 
 export default function Sidebar() {
   const {
@@ -71,25 +73,36 @@ export default function Sidebar() {
       <div className="flex border-b border-panel-border">
         <button
           onClick={() => setSidebarTab('workflows')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-medium transition-colors ${
             sidebarTab === 'workflows'
               ? 'text-white border-b-2 border-indigo-500 bg-white/5'
               : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
           }`}
         >
-          <FolderOpen size={16} />
-          Workflows
+          <FolderOpen size={14} />
+          Flows
         </button>
         <button
           onClick={() => setSidebarTab('versions')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-medium transition-colors ${
             sidebarTab === 'versions'
               ? 'text-white border-b-2 border-indigo-500 bg-white/5'
               : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
           }`}
         >
-          <History size={16} />
+          <History size={14} />
           Versions
+        </button>
+        <button
+          onClick={() => setSidebarTab('executions')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-medium transition-colors ${
+            sidebarTab === 'executions'
+              ? 'text-white border-b-2 border-indigo-500 bg-white/5'
+              : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+          }`}
+        >
+          <Play size={14} />
+          Runs
         </button>
       </div>
 
@@ -233,8 +246,10 @@ export default function Sidebar() {
             </button>
           </div>
         </>
-      ) : (
+      ) : sidebarTab === 'versions' ? (
         <VersionHistory />
+      ) : (
+        <ExecutionHistory />
       )}
     </aside>
   );
