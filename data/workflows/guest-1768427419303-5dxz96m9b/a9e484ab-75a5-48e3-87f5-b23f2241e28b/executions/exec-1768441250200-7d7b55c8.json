@@ -1,0 +1,118 @@
+{
+  "id": "exec-1768441250200-7d7b55c8",
+  "workflowId": "a9e484ab-75a5-48e3-87f5-b23f2241e28b",
+  "workflowVersion": 4,
+  "workflowName": "Untitled Workflow",
+  "startedAt": "2026-01-15T01:39:09.924Z",
+  "completedAt": "2026-01-15T01:40:50.193Z",
+  "duration": 100269,
+  "status": "completed",
+  "steps": [
+    {
+      "nodeId": "start-1",
+      "nodeLabel": "Start",
+      "nodeType": "start",
+      "startedAt": "2026-01-15T01:39:10.426Z",
+      "completedAt": "2026-01-15T01:39:10.426Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "started": true
+      }
+    },
+    {
+      "nodeId": "form-1768439568761",
+      "nodeLabel": "User Input",
+      "nodeType": "form",
+      "startedAt": "2026-01-15T01:40:49.189Z",
+      "completedAt": "2026-01-15T01:40:49.189Z",
+      "duration": 0,
+      "status": "success",
+      "input": {
+        "formConfig": {
+          "title": "",
+          "description": "",
+          "components": [
+            {
+              "id": "component-1768440126197-1yup4kt6g",
+              "type": "checkbox",
+              "name": "field_1768440126197",
+              "label": "Water Damage",
+              "width": "half",
+              "defaultValue": "liquid_damage"
+            },
+            {
+              "id": "component-1768440057315-448i1jv4g",
+              "type": "checkbox",
+              "name": "field_1768440057315",
+              "label": "Problem with Port",
+              "width": "half",
+              "defaultValue": "port_problem"
+            },
+            {
+              "id": "component-1768441137140-l6562rwqe",
+              "type": "date",
+              "name": "field_1768441137140",
+              "label": "Date",
+              "width": "half"
+            },
+            {
+              "id": "component-1768439618325-3qg2gxo8y",
+              "type": "checkbox",
+              "name": "field_1768439618325",
+              "label": "Problem with Speaker",
+              "width": "half",
+              "required": false,
+              "defaultValue": "speaker_problem"
+            }
+          ],
+          "submitLabel": "Submit"
+        }
+      },
+      "output": {
+        "formData": {
+          "field_1768440126197": true,
+          "field_1768441137140": "2026-01-21"
+        }
+      }
+    },
+    {
+      "nodeId": "end-1768439736586",
+      "nodeLabel": "End",
+      "nodeType": "end",
+      "startedAt": "2026-01-15T01:40:50.192Z",
+      "completedAt": "2026-01-15T01:40:50.192Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "completed": true
+      }
+    }
+  ],
+  "context": {
+    "Start": {
+      "response": {
+        "started": true,
+        "timestamp": "2026-01-15T01:39:10.426Z"
+      },
+      "nodeType": "start",
+      "timestamp": "2026-01-15T01:39:10.426Z"
+    },
+    "User Input": {
+      "response": {
+        "field_1768440126197": true,
+        "field_1768441137140": "2026-01-21"
+      },
+      "nodeType": "form",
+      "timestamp": "2026-01-15T01:40:49.189Z"
+    },
+    "End": {
+      "response": {
+        "completed": true,
+        "timestamp": "2026-01-15T01:40:50.192Z"
+      },
+      "nodeType": "end",
+      "timestamp": "2026-01-15T01:40:50.192Z"
+    }
+  }
+}

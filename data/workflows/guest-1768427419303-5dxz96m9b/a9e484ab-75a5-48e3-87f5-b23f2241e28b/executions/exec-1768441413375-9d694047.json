@@ -1,0 +1,35 @@
+{
+  "id": "exec-1768441413375-9d694047",
+  "workflowId": "a9e484ab-75a5-48e3-87f5-b23f2241e28b",
+  "workflowVersion": 5,
+  "workflowName": "Untitled Workflow",
+  "startedAt": "2026-01-15T01:43:25.471Z",
+  "completedAt": "2026-01-15T01:43:33.372Z",
+  "duration": 7901,
+  "status": "cancelled",
+  "steps": [
+    {
+      "nodeId": "start-1",
+      "nodeLabel": "Start",
+      "nodeType": "start",
+      "startedAt": "2026-01-15T01:43:25.973Z",
+      "completedAt": "2026-01-15T01:43:25.973Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "started": true
+      }
+    }
+  ],
+  "context": {
+    "Start": {
+      "response": {
+        "started": true,
+        "timestamp": "2026-01-15T01:43:25.973Z"
+      },
+      "nodeType": "start",
+      "timestamp": "2026-01-15T01:43:25.973Z"
+    }
+  },
+  "error": "Execution stopped by user"
+}

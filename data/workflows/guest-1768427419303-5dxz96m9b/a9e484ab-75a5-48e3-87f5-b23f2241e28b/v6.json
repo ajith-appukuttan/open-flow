@@ -1,0 +1,124 @@
+{
+  "version": 6,
+  "savedAt": "2026-01-15T01:53:13.712Z",
+  "message": "Saved",
+  "nodes": [
+    {
+      "id": "start-1",
+      "type": "start",
+      "position": {
+        "x": -720,
+        "y": -795
+      },
+      "data": {
+        "label": "Start"
+      },
+      "measured": {
+        "width": 120,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "end-1768439736586",
+      "type": "end",
+      "position": {
+        "x": 270,
+        "y": -585
+      },
+      "data": {
+        "label": "End"
+      },
+      "measured": {
+        "width": 120,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "form-1768441912385",
+      "type": "form",
+      "position": {
+        "x": -285,
+        "y": -855
+      },
+      "data": {
+        "label": "User Input",
+        "formConfig": {
+          "title": "",
+          "description": "",
+          "components": [
+            {
+              "id": "component-1768441923167-7k0lih2xz",
+              "type": "card",
+              "name": "field_1768441923167",
+              "children": [
+                {
+                  "id": "component-1768441949433-lk525wgwz",
+                  "type": "checkbox",
+                  "name": "field_1768441949433",
+                  "label": "Checkbox",
+                  "width": "half"
+                },
+                {
+                  "id": "component-1768441955600-ec4nul4z8",
+                  "type": "checkbox",
+                  "name": "field_1768441955600",
+                  "label": "Checkbox",
+                  "width": "half"
+                },
+                {
+                  "id": "component-1768441962767-8whjm9ng3",
+                  "type": "checkbox",
+                  "name": "field_1768441962767",
+                  "label": "Checkbox",
+                  "width": "half"
+                },
+                {
+                  "id": "component-1768441969517-g0ifxs02x",
+                  "type": "checkbox",
+                  "name": "field_1768441969517",
+                  "label": "Checkbox",
+                  "width": "half"
+                }
+              ]
+            }
+          ],
+          "submitLabel": "Submit"
+        }
+      },
+      "measured": {
+        "width": 160,
+        "height": 64
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "start-1",
+      "target": "form-1768441912385",
+      "id": "edge-1768441985934"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "form-1768441912385",
+      "target": "end-1768439736586",
+      "id": "edge-1768441990201"
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "version": 4,
+  "savedAt": "2026-01-15T01:39:05.232Z",
+  "message": "Saved",
+  "nodes": [
+    {
+      "id": "start-1",
+      "type": "start",
+      "position": {
+        "x": -720,
+        "y": -795
+      },
+      "data": {
+        "label": "Start"
+      },
+      "measured": {
+        "width": 120,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "form-1768439568761",
+      "type": "form",
+      "position": {
+        "x": -285,
+        "y": -795
+      },
+      "data": {
+        "label": "User Input",
+        "formConfig": {
+          "title": "",
+          "description": "",
+          "components": [
+            {
+              "id": "component-1768440126197-1yup4kt6g",
+              "type": "checkbox",
+              "name": "field_1768440126197",
+              "label": "Water Damage",
+              "width": "half",
+              "defaultValue": "liquid_damage"
+            },
+            {
+              "id": "component-1768440057315-448i1jv4g",
+              "type": "checkbox",
+              "name": "field_1768440057315",
+              "label": "Problem with Port",
+              "width": "half",
+              "defaultValue": "port_problem"
+            },
+            {
+              "id": "component-1768441137140-l6562rwqe",
+              "type": "date",
+              "name": "field_1768441137140",
+              "label": "Date",
+              "width": "half"
+            },
+            {
+              "id": "component-1768439618325-3qg2gxo8y",
+              "type": "checkbox",
+              "name": "field_1768439618325",
+              "label": "Problem with Speaker",
+              "width": "half",
+              "required": false,
+              "defaultValue": "speaker_problem"
+            }
+          ],
+          "submitLabel": "Submit"
+        }
+      },
+      "measured": {
+        "width": 160,
+        "height": 64
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "end-1768439736586",
+      "type": "end",
+      "position": {
+        "x": 270,
+        "y": -585
+      },
+      "data": {
+        "label": "End"
+      },
+      "measured": {
+        "width": 120,
+        "height": 60
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "start-1",
+      "target": "form-1768439568761",
+      "id": "edge-1768439733966"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "form-1768439568761",
+      "target": "end-1768439736586",
+      "id": "edge-1768439743150"
+    }
+  ]
+}

@@ -1,10 +1,12 @@
 import type { FormComponent } from '../../types/workflow';
+import type { ReactNode } from 'react';
 
 interface FormComponentRendererProps {
   component: FormComponent;
   preview?: boolean;
   value?: unknown;
   onChange?: (value: unknown) => void;
+  children?: ReactNode;
 }
 
 export default function FormComponentRenderer({ 
@@ -12,6 +14,7 @@ export default function FormComponentRenderer({
   preview = false,
   value,
   onChange,
+  children,
 }: FormComponentRendererProps) {
   const baseInputClass = "w-full bg-canvas-bg border border-panel-border rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500";
 
@@ -313,7 +316,17 @@ export default function FormComponentRenderer({
           {component.label && (
             <h4 className="text-sm font-semibold text-white mb-2">{component.label}</h4>
           )}
-          <div className="text-xs text-gray-500">Card content area</div>
+          {children ? children : (
+            component.children && component.children.length > 0 ? (
+              <div className="space-y-3">
+                {component.children.map((child) => (
+                  <FormComponentRenderer key={child.id} component={child} preview={preview} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500">Card content area</div>
+            )
+          )}
         </div>
       );
 

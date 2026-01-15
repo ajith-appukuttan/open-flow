@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # React Frontend (served by nginx)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: workflow-designer-client
+    ports:
+      - "${CLIENT_PORT:-80}:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - workflow-network
+    restart: unless-stopped
+
+  # Node.js Backend API
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: workflow-designer-server
+    ports:
+      - "${SERVER_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    volumes:
+      - workflow-data:/app/data
+    networks:
+      - workflow-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  workflow-network:
+    driver: bridge
+
+volumes:
+  workflow-data:
+    driver: local
