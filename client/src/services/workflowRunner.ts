@@ -71,6 +71,26 @@ export interface WorkflowTelemetry {
   };
 }
 
+// State snapshot for tracking state changes over time (like Redux DevTools)
+export interface StateSnapshot {
+  id: string;
+  timestamp: Date;
+  action: string; // Description of what caused this state change
+  nodeId?: string;
+  nodeLabel?: string;
+  nodeType?: NodeType;
+  context: WorkflowContext; // Deep copy of context at this point
+  currentNodeId: string | null;
+  visitedNodeIds: string[];
+  isRunning: boolean;
+  isPaused: boolean;
+  diff?: {
+    added?: string[];    // Keys added to context
+    modified?: string[]; // Keys modified in context
+    removed?: string[];  // Keys removed from context
+  };
+}
+
 export interface WorkflowRunnerState {
   isRunning: boolean;
   isPaused: boolean;
@@ -85,6 +105,8 @@ export interface WorkflowRunnerState {
   executionSteps: ExecutionStep[];
   executionStartTime: Date | null;
   executionStatus: ExecutionStatus;
+  // State snapshots for State Viewer (like Redux DevTools)
+  stateSnapshots: StateSnapshot[];
 }
 
 /**
@@ -263,6 +285,7 @@ export class WorkflowRunner {
       executionSteps: [],
       executionStartTime: null,
       executionStatus: 'running',
+      stateSnapshots: [],
     };
   }
 
@@ -496,6 +519,7 @@ export class WorkflowRunner {
   }
 
   private storeNodeOutput(nodeLabel: string, output: Omit<NodeOutput, 'timestamp'>) {
+    const previousContext = this.state.context;
     const newContext = {
       ...this.state.context,
       [nodeLabel]: {
@@ -504,6 +528,70 @@ export class WorkflowRunner {
       },
     };
     this.updateState({ context: newContext });
+    
+    // Calculate diff
+    const diff = this.calculateContextDiff(previousContext, newContext);
+    
+    // Record snapshot after storing output
+    const node = this.state.currentNodeId ? this.getNode(this.state.currentNodeId) : undefined;
+    this.recordStateSnapshot(
+      `NODE_OUTPUT: ${nodeLabel}`,
+      node?.id,
+      nodeLabel,
+      node?.type as NodeType | undefined,
+      diff
+    );
+  }
+
+  // Calculate what changed between two context states
+  private calculateContextDiff(
+    previous: WorkflowContext,
+    current: WorkflowContext
+  ): StateSnapshot['diff'] {
+    const previousKeys = Object.keys(previous);
+    const currentKeys = Object.keys(current);
+    
+    const added = currentKeys.filter(k => !previousKeys.includes(k));
+    const removed = previousKeys.filter(k => !currentKeys.includes(k));
+    const modified = currentKeys.filter(k => {
+      if (!previousKeys.includes(k)) return false;
+      return JSON.stringify(previous[k]) !== JSON.stringify(current[k]);
+    });
+    
+    return {
+      added: added.length > 0 ? added : undefined,
+      modified: modified.length > 0 ? modified : undefined,
+      removed: removed.length > 0 ? removed : undefined,
+    };
+  }
+
+  // Record a state snapshot for the State Viewer
+  private recordStateSnapshot(
+    action: string,
+    nodeId?: string,
+    nodeLabel?: string,
+    nodeType?: NodeType,
+    diff?: StateSnapshot['diff']
+  ) {
+    const snapshot: StateSnapshot = {
+      id: `snapshot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+      action,
+      nodeId,
+      nodeLabel,
+      nodeType,
+      // Deep copy the context to capture its state at this moment
+      context: JSON.parse(JSON.stringify(this.state.context)),
+      currentNodeId: this.state.currentNodeId,
+      visitedNodeIds: [...this.state.visitedNodeIds],
+      isRunning: this.state.isRunning,
+      isPaused: this.state.isPaused,
+      diff,
+    };
+    
+    this.updateState({
+      stateSnapshots: [...this.state.stateSnapshots, snapshot],
+    });
   }
 
   private getNode(nodeId: string): WorkflowNode | undefined {
@@ -521,6 +609,30 @@ export class WorkflowRunner {
   // Public method to get current context (for UI display)
   getContext(): WorkflowContext {
     return this.state.context;
+  }
+
+  // Public method to get state snapshots (for State Viewer)
+  getStateSnapshots(): StateSnapshot[] {
+    return this.state.stateSnapshots;
+  }
+
+  // Public method to get current state for State Viewer
+  getCurrentState(): {
+    isRunning: boolean;
+    isPaused: boolean;
+    currentNodeId: string | null;
+    visitedNodeIds: string[];
+    context: WorkflowContext;
+    executionStatus: ExecutionStatus;
+  } {
+    return {
+      isRunning: this.state.isRunning,
+      isPaused: this.state.isPaused,
+      currentNodeId: this.state.currentNodeId,
+      visitedNodeIds: this.state.visitedNodeIds,
+      context: this.state.context,
+      executionStatus: this.state.executionStatus,
+    };
   }
 
   start() {
@@ -560,7 +672,11 @@ export class WorkflowRunner {
       executionSteps: [],
       executionStartTime: new Date(),
       executionStatus: 'running',
+      stateSnapshots: [],
     });
+
+    // Record initial state snapshot
+    this.recordStateSnapshot('WORKFLOW_START', undefined, undefined, undefined);
 
     this.addMessage({
       type: 'system',
@@ -575,6 +691,10 @@ export class WorkflowRunner {
       type: 'system',
       content: 'Workflow execution stopped.',
     });
+    
+    // Record stop snapshot
+    this.recordStateSnapshot('WORKFLOW_STOPPED');
+    
     this.updateState({
       isRunning: false,
       isPaused: false,
@@ -599,6 +719,7 @@ export class WorkflowRunner {
       executionSteps: [],
       executionStartTime: null,
       executionStatus: 'running',
+      stateSnapshots: [],
     });
   }
 
@@ -800,6 +921,14 @@ export class WorkflowRunner {
       visitedNodeIds: [...this.state.visitedNodeIds, nodeId],
     });
 
+    // Record state snapshot for entering this node
+    this.recordStateSnapshot(
+      `ENTER_NODE: ${node.data.label}`,
+      node.id,
+      node.data.label,
+      node.type as NodeType
+    );
+
     // Small delay for visual effect
     setTimeout(() => {
       this.processNode(node);
@@ -912,6 +1041,9 @@ export class WorkflowRunner {
       isPaused: false,
       executionStatus: 'completed',
     });
+
+    // Record final state snapshot
+    this.recordStateSnapshot('WORKFLOW_COMPLETE', node.id, node.data.label, 'end');
 
     // Save the completed execution
     this.saveExecution('completed');

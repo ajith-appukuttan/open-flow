@@ -9,16 +9,17 @@ import {
 } from '@xyflow/react';
 import type { Workflow, WorkflowNode, WorkflowEdge, WorkflowListItem, WorkflowValidationResult, WorkflowVersionListItem, ExecutionListItem, WorkflowExecution } from '../types/workflow';
 import * as api from '../api/workflowApi';
-import { WorkflowRunner, type TestMessage, type WorkflowRunnerState, type WorkflowContext, type WorkflowTelemetry } from '../services/workflowRunner';
+import { WorkflowRunner, type TestMessage, type WorkflowRunnerState, type WorkflowContext, type WorkflowTelemetry, type StateSnapshot } from '../services/workflowRunner';
 import { DEMO_WORKFLOW_DATA, hasGuestDemoBeenSeeded, markGuestDemoAsSeeded } from '../data/demoWorkflow';
+import { webSocketService } from '../services/WebSocketService';
 
 interface WorkflowState {
   // Current workflow
   workflow: Workflow | null;
-  
+
   // Workflow list
   workflows: WorkflowListItem[];
-  
+
   // UI state
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
@@ -28,7 +29,7 @@ interface WorkflowState {
   validationResult: WorkflowValidationResult | null;
   sidebarOpen: boolean;
   propertiesPanelOpen: boolean;
-  
+
   // Test mode state
   isTestMode: boolean;
   testDrawerOpen: boolean;
@@ -41,18 +42,26 @@ interface WorkflowState {
   workflowRunner: WorkflowRunner | null;
   workflowContext: WorkflowContext;
   workflowTelemetry: WorkflowTelemetry | null;
-  
+
   // Version state
   versions: (WorkflowVersionListItem & { isCurrent: boolean })[];
   selectedVersion: number | null;
   isLoadingVersions: boolean;
   sidebarTab: 'workflows' | 'versions' | 'executions';
-  
+
   // Execution state
   executions: ExecutionListItem[];
   selectedExecution: WorkflowExecution | null;
   isLoadingExecutions: boolean;
-  
+
+  // State viewer state
+  stateViewerOpen: boolean;
+  stateSnapshots: StateSnapshot[];
+
+  // Remote execution state
+  isRemoteMode: boolean;
+  remoteRole: 'HOST' | 'REMOTE' | null;
+
   // Actions
   setWorkflow: (workflow: Workflow | null) => void;
   setNodes: (nodes: WorkflowNode[]) => void;
@@ -66,7 +75,7 @@ interface WorkflowState {
   deleteSelected: () => void;
   selectNode: (nodeId: string | null) => void;
   selectEdge: (edgeId: string | null) => void;
-  
+
   // Workflow management
   loadWorkflows: () => Promise<void>;
   loadWorkflow: (id: string) => Promise<void>;
@@ -78,12 +87,12 @@ interface WorkflowState {
   exportWorkflow: () => void;
   importWorkflow: (json: string) => Promise<void>;
   seedDemoWorkflowForGuest: () => Promise<void>;
-  
+
   // UI actions
   toggleSidebar: () => void;
   togglePropertiesPanel: () => void;
   setError: (error: string | null) => void;
-  
+
   // Test mode actions
   openTestDrawer: () => void;
   closeTestDrawer: () => void;
@@ -94,19 +103,28 @@ interface WorkflowState {
   selectTestOption: (optionId: string) => void;
   continueTestLoop: (shouldContinue: boolean) => void;
   submitForm: (formData: Record<string, unknown>) => void;
-  
+
   // Version actions
   setSidebarTab: (tab: 'workflows' | 'versions' | 'executions') => void;
   loadVersions: () => Promise<void>;
   previewVersion: (version: number) => Promise<void>;
   restoreVersion: (version: number) => Promise<void>;
   clearVersionPreview: () => void;
-  
+
   // Execution actions
   loadExecutions: () => Promise<void>;
   viewExecution: (executionId: string) => Promise<void>;
   clearExecutionView: () => void;
   deleteExecution: (executionId: string) => Promise<void>;
+
+  // State viewer actions
+  toggleStateViewer: () => void;
+  openStateViewer: () => void;
+  closeStateViewer: () => void;
+
+  // Remote execution actions
+  startRemoteSession: (role: 'HOST' | 'REMOTE') => void;
+  handleRemoteMessage: (data: any) => void;
 }
 
 const createDefaultWorkflow = (): Workflow => ({
@@ -137,7 +155,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   validationResult: null,
   sidebarOpen: true,
   propertiesPanelOpen: true,
-  
+
   // Test mode initial state
   isTestMode: false,
   testDrawerOpen: false,
@@ -150,17 +168,25 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   workflowRunner: null,
   workflowContext: {},
   workflowTelemetry: null,
-  
+
   // Version initial state
   versions: [],
   selectedVersion: null,
   isLoadingVersions: false,
   sidebarTab: 'workflows',
-  
+
   // Execution initial state
   executions: [],
   selectedExecution: null,
   isLoadingExecutions: false,
+
+  // State viewer initial state
+  stateViewerOpen: false,
+  stateSnapshots: [],
+
+  // Remote execution initial state
+  isRemoteMode: false,
+  remoteRole: null,
 
   setWorkflow: (workflow) => set({ workflow, selectedNodeId: null, selectedEdgeId: null }),
 
@@ -283,10 +309,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         nodes: DEMO_WORKFLOW_DATA.nodes,
         edges: DEMO_WORKFLOW_DATA.edges,
       });
-      
+
       // Mark as seeded so we don't create it again
       markGuestDemoAsSeeded();
-      
+
       // Load it as the current workflow and refresh the list
       set({ workflow });
       get().loadWorkflows();
@@ -420,12 +446,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   togglePropertiesPanel: () => set((state) => ({ propertiesPanelOpen: !state.propertiesPanelOpen })),
   setError: (error) => set({ error }),
-  
+
   // Test mode actions
   openTestDrawer: () => {
     set({ testDrawerOpen: true, isTestMode: true });
   },
-  
+
   closeTestDrawer: () => {
     const { workflowRunner } = get();
     if (workflowRunner) {
@@ -440,18 +466,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       workflowRunner: null,
     });
   },
-  
+
   setTestDrawerHeight: (height) => {
     set({ testDrawerHeight: Math.max(150, Math.min(600, height)) });
   },
-  
+
   startTest: () => {
     const { workflow } = get();
     if (!workflow) {
       set({ error: 'No workflow to test' });
       return;
     }
-    
+
     const handleStateChange = (runnerState: WorkflowRunnerState) => {
       set({
         testMessages: runnerState.messages,
@@ -461,9 +487,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         isTestPaused: runnerState.isPaused,
         workflowContext: runnerState.context,
         workflowTelemetry: runnerState.telemetry,
+        stateSnapshots: runnerState.stateSnapshots,
       });
     };
-    
+
     const runner = new WorkflowRunner(workflow, handleStateChange);
     set({
       workflowRunner: runner,
@@ -473,10 +500,16 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       isTestRunning: true,
       isTestPaused: false,
     });
-    
+
+    // If hosting a remote session, notify remote client
+    const { isRemoteMode, remoteRole } = get();
+    if (isRemoteMode && remoteRole === 'HOST') {
+      webSocketService.send({ type: 'START_WORKFLOW', workflow });
+    }
+
     runner.start();
   },
-  
+
   stopTest: () => {
     const { workflowRunner } = get();
     if (workflowRunner) {
@@ -488,7 +521,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       currentTestNodeId: null,
     });
   },
-  
+
   resetTest: () => {
     const { workflowRunner } = get();
     if (workflowRunner) {
@@ -502,45 +535,62 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       isTestPaused: false,
       workflowContext: {},
       workflowTelemetry: null,
+      stateSnapshots: [],
     });
   },
-  
+
   selectTestOption: (optionId) => {
     const { workflowRunner, currentTestNodeId, workflow } = get();
     if (!workflowRunner || !currentTestNodeId || !workflow) return;
-    
+
     const currentNode = workflow.nodes.find((n) => n.id === currentTestNodeId);
     if (!currentNode) return;
-    
+
     if (currentNode.type === 'decision') {
       workflowRunner.selectDecisionOption(optionId);
     } else if (currentNode.type === 'parallel') {
       workflowRunner.selectParallelBranch(optionId);
     }
+
+    // If hosting, send update to remote
+    const { isRemoteMode, remoteRole } = get();
+    if (isRemoteMode && remoteRole === 'HOST') {
+      webSocketService.send({
+        type: 'USER_INPUT_REQUEST',
+        nodeId: currentTestNodeId,
+        options: currentNode.data.options // relay options if needed, though remote might have workflow def
+      });
+    }
   },
-  
+
   continueTestLoop: (shouldContinue) => {
     const { workflowRunner } = get();
     if (!workflowRunner) return;
     workflowRunner.continueLoop(shouldContinue);
   },
-  
+
   submitForm: (formData) => {
     const { workflowRunner } = get();
     if (!workflowRunner) return;
     workflowRunner.submitForm(formData);
+
+    // If hosting, notify remote (or if remote submitting to host)
+    const { isRemoteMode, remoteRole } = get();
+    if (isRemoteMode && remoteRole === 'REMOTE') {
+      webSocketService.send({ type: 'USER_INPUT_RESPONSE', mb_data: formData });
+    }
   },
-  
+
   // Version actions
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
-  
+
   loadVersions: async () => {
     const { workflow } = get();
     if (!workflow?.id) {
       set({ versions: [] });
       return;
     }
-    
+
     set({ isLoadingVersions: true });
     try {
       const versions = await api.getWorkflowVersions(workflow.id);
@@ -550,11 +600,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ versions: [], isLoadingVersions: false });
     }
   },
-  
+
   previewVersion: async (version) => {
     const { workflow } = get();
     if (!workflow?.id) return;
-    
+
     set({ isLoadingVersions: true, selectedVersion: version });
     try {
       const versionData = await api.getWorkflowVersion(workflow.id, version);
@@ -572,11 +622,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ isLoadingVersions: false, selectedVersion: null });
     }
   },
-  
+
   restoreVersion: async (version) => {
     const { workflow } = get();
     if (!workflow?.id) return;
-    
+
     set({ isLoadingVersions: true });
     try {
       const restoredWorkflow = await api.restoreWorkflowVersion(workflow.id, version);
@@ -592,16 +642,16 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ error: (err as Error).message, isLoadingVersions: false });
     }
   },
-  
+
   clearVersionPreview: () => {
     const { workflow, selectedVersion } = get();
     if (!workflow?.id || selectedVersion === null) return;
-    
+
     // Reload the current version
     set({ selectedVersion: null });
     get().loadWorkflow(workflow.id);
   },
-  
+
   // Execution actions
   loadExecutions: async () => {
     const { workflow } = get();
@@ -609,7 +659,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ executions: [] });
       return;
     }
-    
+
     set({ isLoadingExecutions: true });
     try {
       const executions = await api.getExecutions(workflow.id);
@@ -619,11 +669,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ executions: [], isLoadingExecutions: false });
     }
   },
-  
+
   viewExecution: async (executionId) => {
     const { workflow } = get();
     if (!workflow?.id) return;
-    
+
     set({ isLoadingExecutions: true });
     try {
       const execution = await api.getExecution(workflow.id, executionId);
@@ -633,15 +683,15 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ isLoadingExecutions: false, error: (err as Error).message });
     }
   },
-  
+
   clearExecutionView: () => {
     set({ selectedExecution: null });
   },
-  
+
   deleteExecution: async (executionId) => {
     const { workflow } = get();
     if (!workflow?.id) return;
-    
+
     try {
       await api.deleteExecution(workflow.id, executionId);
       // Reload executions
@@ -650,4 +700,62 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ error: (err as Error).message });
     }
   },
+
+  // State viewer actions
+  toggleStateViewer: () => set((state) => ({ stateViewerOpen: !state.stateViewerOpen })),
+  openStateViewer: () => set({ stateViewerOpen: true }),
+  closeStateViewer: () => set({ stateViewerOpen: false }),
+
+  startRemoteSession: (role) => {
+    webSocketService.connect(role);
+    set({ isRemoteMode: true, remoteRole: role });
+
+    webSocketService.onMessage((data) => {
+      get().handleRemoteMessage(data);
+    });
+  },
+
+  handleRemoteMessage: (data) => {
+    const { remoteRole, workflowRunner, isTestRunning } = get();
+
+    switch (data.type) {
+      case 'START_WORKFLOW':
+        if (remoteRole === 'REMOTE') {
+          // In a real app, we might sync the workflow definition here
+          // For now assuming same workflow or just entering "listen" mode
+          set({ isTestRunning: true, testMessages: [], isTestPaused: false });
+          console.log('Remote started workflow');
+        }
+        break;
+      case 'WORKFLOW_STATUS':
+        // Update local view based on host status
+        if (remoteRole === 'REMOTE') {
+          // This would need more complex syncing of runner state
+        }
+        break;
+      case 'USER_INPUT_REQUEST':
+        if (remoteRole === 'REMOTE') {
+          set({
+            isTestPaused: true,
+            currentTestNodeId: data.nodeId,
+            // Construct a fake message to trigger UI
+            testMessages: [...get().testMessages, {
+              id: Date.now().toString(),
+              type: 'form', // or derive from node
+              content: 'Remote requested input',
+              timestamp: new Date(),
+              nodeId: data.nodeId,
+              options: data.options
+            }]
+          });
+        }
+        break;
+      case 'USER_INPUT_RESPONSE':
+        if (remoteRole === 'HOST' && isTestRunning && workflowRunner) {
+          // Simulate user input on host
+          workflowRunner.submitForm(data.mb_data);
+        }
+        break;
+    }
+  }
 }));

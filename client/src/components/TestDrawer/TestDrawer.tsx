@@ -6,9 +6,12 @@ import {
   X,
   GripHorizontal,
   MessageCircle,
+  Activity,
+  Wifi,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../store/workflowStore';
 import ChatMessage from './ChatMessage';
+import StateViewer from '../StateViewer/StateViewer';
 
 export default function TestDrawer() {
   const {
@@ -25,6 +28,17 @@ export default function TestDrawer() {
     selectTestOption,
     continueTestLoop,
     submitForm,
+    // State viewer
+    stateViewerOpen,
+    stateSnapshots,
+    workflowContext,
+    currentTestNodeId,
+    toggleStateViewer,
+    closeStateViewer,
+    // Remote
+    isRemoteMode,
+    remoteRole,
+    startRemoteSession,
   } = useWorkflowStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -113,8 +127,8 @@ export default function TestDrawer() {
                   ? 'Waiting for input...'
                   : 'Running...'
                 : testMessages.length > 0
-                ? 'Completed'
-                : 'Ready to start'}
+                  ? 'Completed'
+                  : 'Ready to start'}
             </p>
           </div>
         </div>
@@ -160,6 +174,49 @@ export default function TestDrawer() {
             </button>
           )}
 
+          {/* State Viewer Toggle */}
+          <button
+            onClick={toggleStateViewer}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${stateViewerOpen
+              ? 'bg-indigo-600 text-white'
+              : 'bg-panel-hover hover:bg-gray-600 text-gray-300'
+              }`}
+            title="Toggle State Viewer"
+          >
+            <Activity size={14} />
+            State
+          </button>
+
+          {/* Remote Toggle */}
+          <div className="flex items-center gap-1 bg-panel-hover rounded-lg p-1">
+            {!isRemoteMode ? (
+              <>
+                <button
+                  onClick={() => startRemoteSession('HOST')}
+                  className="px-2 py-1 text-xs text-gray-300 hover:text-white transition-colors"
+                  title="Host a remote session"
+                >
+                  Host
+                </button>
+                <div className="w-px h-3 bg-gray-600" />
+                <button
+                  onClick={() => startRemoteSession('REMOTE')}
+                  className="px-2 py-1 text-xs text-gray-300 hover:text-white transition-colors"
+                  title="Join a remote session"
+                >
+                  Join
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 px-2 py-1">
+                <Wifi size={14} className="text-emerald-500" />
+                <span className="text-xs text-emerald-500 font-medium">
+                  {remoteRole === 'HOST' ? 'Hosting' : 'Connected'}
+                </span>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={closeTestDrawer}
             className="p-1.5 hover:bg-panel-hover rounded-lg text-gray-500 hover:text-white transition-colors"
@@ -203,6 +260,18 @@ export default function TestDrawer() {
           </div>
         </div>
       )}
+
+      {/* State Viewer */}
+      <StateViewer
+        isOpen={stateViewerOpen}
+        onClose={closeStateViewer}
+        snapshots={stateSnapshots}
+        currentContext={workflowContext}
+        currentNodeId={currentTestNodeId}
+        isRunning={isTestRunning}
+        isPaused={isTestPaused}
+        executionStatus={isTestRunning ? 'running' : testMessages.length > 0 ? 'completed' : 'idle'}
+      />
     </div>
   );
 }

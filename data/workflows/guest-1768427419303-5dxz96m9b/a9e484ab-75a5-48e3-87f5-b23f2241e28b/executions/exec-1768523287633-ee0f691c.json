@@ -1,0 +1,115 @@
+{
+  "id": "exec-1768523287633-ee0f691c",
+  "workflowId": "a9e484ab-75a5-48e3-87f5-b23f2241e28b",
+  "workflowVersion": 6,
+  "workflowName": "Untitled Workflow",
+  "startedAt": "2026-01-16T00:26:12.322Z",
+  "completedAt": "2026-01-16T00:28:07.614Z",
+  "duration": 115292,
+  "status": "completed",
+  "steps": [
+    {
+      "nodeId": "start-1",
+      "nodeLabel": "Start",
+      "nodeType": "start",
+      "startedAt": "2026-01-16T00:26:12.825Z",
+      "completedAt": "2026-01-16T00:26:12.825Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "started": true
+      }
+    },
+    {
+      "nodeId": "form-1768441912385",
+      "nodeLabel": "User Input",
+      "nodeType": "form",
+      "startedAt": "2026-01-16T00:28:06.609Z",
+      "completedAt": "2026-01-16T00:28:06.609Z",
+      "duration": 0,
+      "status": "success",
+      "input": {
+        "formConfig": {
+          "title": "",
+          "description": "",
+          "components": [
+            {
+              "id": "component-1768441923167-7k0lih2xz",
+              "type": "card",
+              "name": "field_1768441923167",
+              "children": [
+                {
+                  "id": "component-1768441949433-lk525wgwz",
+                  "type": "checkbox",
+                  "name": "field_1768441949433",
+                  "label": "Checkbox",
+                  "width": "half"
+                },
+                {
+                  "id": "component-1768441955600-ec4nul4z8",
+                  "type": "checkbox",
+                  "name": "field_1768441955600",
+                  "label": "Checkbox",
+                  "width": "half"
+                },
+                {
+                  "id": "component-1768441962767-8whjm9ng3",
+                  "type": "checkbox",
+                  "name": "field_1768441962767",
+                  "label": "Checkbox",
+                  "width": "half"
+                },
+                {
+                  "id": "component-1768441969517-g0ifxs02x",
+                  "type": "checkbox",
+                  "name": "field_1768441969517",
+                  "label": "Checkbox",
+                  "width": "half"
+                }
+              ]
+            }
+          ],
+          "submitLabel": "Submit"
+        }
+      },
+      "output": {
+        "formData": {}
+      }
+    },
+    {
+      "nodeId": "end-1768439736586",
+      "nodeLabel": "End",
+      "nodeType": "end",
+      "startedAt": "2026-01-16T00:28:07.613Z",
+      "completedAt": "2026-01-16T00:28:07.613Z",
+      "duration": 0,
+      "status": "success",
+      "output": {
+        "completed": true
+      }
+    }
+  ],
+  "context": {
+    "Start": {
+      "response": {
+        "started": true,
+        "timestamp": "2026-01-16T00:26:12.824Z"
+      },
+      "nodeType": "start",
+      "timestamp": "2026-01-16T00:26:12.825Z"
+    },
+    "User Input": {
+      "response": {},
+      "nodeType": "form",
+      "timestamp": "2026-01-16T00:28:06.609Z"
+    },
+    "End": {
+      "response": {
+        "completed": true,
+        "timestamp": "2026-01-16T00:28:07.612Z"
+      },
+      "nodeType": "end",
+      "timestamp": "2026-01-16T00:28:07.612Z"
+    }
+  }
+}

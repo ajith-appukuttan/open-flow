@@ -9,6 +9,7 @@ import Toast from './components/Toast/Toast';
 import TestDrawer from './components/TestDrawer/TestDrawer';
 import ExecutionViewer from './components/ExecutionViewer/ExecutionViewer';
 import LoginPage from './components/Auth/LoginPage';
+import StateViewerPopout from './components/StateViewer/StateViewerPopout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useWorkflowStore } from './store/workflowStore';
 import { Loader2 } from 'lucide-react';
@@ -71,6 +72,11 @@ function AppContent() {
 }
 
 function App() {
+  // Check if we're on the state-viewer popout route
+  if (window.location.pathname === '/state-viewer') {
+    return <StateViewerPopout />;
+  }
+
   return (
     <AuthProvider>
       <AppContent />

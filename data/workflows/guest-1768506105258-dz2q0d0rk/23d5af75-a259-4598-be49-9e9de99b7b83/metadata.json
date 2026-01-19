@@ -1,0 +1,9 @@
+{
+  "id": "23d5af75-a259-4598-be49-9e9de99b7b83",
+  "name": "Sample API Workflow",
+  "description": "A demo workflow showing how to call an API and make decisions based on the response",
+  "userId": "guest-1768506105258-dz2q0d0rk",
+  "createdAt": "2026-01-15T19:41:45.317Z",
+  "updatedAt": "2026-01-15T19:41:45.317Z",
+  "currentVersion": 1
+}
